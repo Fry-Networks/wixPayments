@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node build/main.js",
     "dev": "nodemon --exec ts-node --esm src/main.ts ",
-    "sync": "git pull && tsc && pm2 restart weather_data"
+    "sync": "git pull && tsc && pm2 restart wix_listen"
   },
   "keywords": [],
   "author": "",
