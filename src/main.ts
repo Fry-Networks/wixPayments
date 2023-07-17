@@ -14,10 +14,11 @@ app.post('/neworder', async function (req, res) {
 });
 
 
-export async function startApi() {
+async function startApi() {
     const port = process.env.PORT || 3000;
     app.listen(port, () => {
         console.log(`Listening on port ${port}`);
     });
-
 }
+
+startApi();
