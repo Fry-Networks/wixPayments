@@ -36,10 +36,10 @@ export async function getMongoUser({ address, email }: { address?: string, email
 
 export async function generateMinerKey(index: string) {
     //create a string of 32 random characters
-    let key = randomstring.generate({ length: 32, charset: 'alpha-numeric', capitalization: 'uppercase' });
+    let key = randomstring.generate({ length: 32, charset: 'alphanumeric', capitalization: 'uppercase' });
     let minerKey = `${index}-${key}`;
     while (await DeviceModel.exists({ miner_key: minerKey })) {
-        key = randomstring.generate({ length: 32, charset: 'alpha-numeric', capitalization: 'uppercase' });
+        key = randomstring.generate({ length: 32, charset: 'alphanumeric', capitalization: 'uppercase' });
         minerKey = `${index}-${key}`;
     }
     return minerKey;
