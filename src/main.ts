@@ -1,11 +1,9 @@
 import express from 'express';
 import bodyparser from 'body-parser';
-import axios from 'axios';
 import 'dotenv/config'
-import { connect } from 'db/connect';
-import { getUser } from 'db/users-schema';
-import { generateMinerKey, getMongoUser } from 'db/utils';
-import { DeviceModel } from 'db/devices-schema';
+import { connect } from './db/connect';
+import { generateMinerKey, getMongoUser } from './db/utils';
+import { DeviceModel } from './db/devices-schema';
 import { sendMail } from 'MailProcessor';
 const app = express()
 app.use(bodyparser.json());
@@ -15,6 +13,9 @@ app.get('/', function (req, res) {
 })
 
 app.post('/neworder', async function (req, res) {
+    //verify that the request is coming from wix
+    
+
     const order: wixProductWebhook = req.body;
 
     const products_ids: string[] = JSON.parse(order.data['product-ids']);
