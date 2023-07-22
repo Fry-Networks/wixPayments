@@ -7,6 +7,13 @@ import { Options } from 'nodemailer/lib/mailer/index.js';
 import fs from 'fs';
 import path from 'path';
 
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+
 const { client_secret, client_id, redirect_uris } = credentials.installed;
 let oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 oAuth2Client.setCredentials(tokens);

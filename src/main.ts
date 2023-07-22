@@ -16,7 +16,7 @@ app.post('/neworder', async function (req, res) {
     //verify that the request is coming from wix
     
 
-    const order: wixProductWebhook = JSON.parse(req.body);
+    const order: wixProductWebhook = req.body;
     console.log(order);
 
     const products_ids: string[] = JSON.parse(order.data['product-ids']);
