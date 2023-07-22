@@ -1,9 +1,9 @@
 import express from 'express';
 import bodyparser from 'body-parser';
 import 'dotenv/config'
-import { connect } from './db/connect';
-import { generateMinerKey, getMongoUser } from './db/utils';
-import { DeviceModel } from './db/devices-schema';
+import { connect } from './db/connect.js';
+import { generateMinerKey, getMongoUser } from './db/utils.js';
+import { DeviceModel } from './db/devices-schema.js';
 import { sendMail } from 'MailProcessor';
 const app = express()
 app.use(bodyparser.json());
