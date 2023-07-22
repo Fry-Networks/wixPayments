@@ -16,7 +16,8 @@ app.post('/neworder', async function (req, res) {
     //verify that the request is coming from wix
     
 
-    const order: wixProductWebhook = req.body;
+    const order: wixProductWebhook = JSON.parse(req.body);
+    console.log(order);
 
     const products_ids: string[] = JSON.parse(order.data['product-ids']);
 
@@ -86,27 +87,27 @@ interface wixProductWebhook {
 
 /*
 {
-6|wix_list |   data: {
-6|wix_list |     'contact.Name.Last': 'Arnold',
-6|wix_list |     'contact.Address[0].Country': 'US',
-6|wix_list |     'product.price': '230.0',
-6|wix_list |     'contact.Address[0].City': 'North Augusta',
-6|wix_list |     'product.name': '$FRY Bandwidth Miner',
-6|wix_list |     'contact.Email[0]': 'prince_edward_21@yahoo.com',
-6|wix_list |     'contact.Address[1].Street': '608 McKenzie Street',
-6|wix_list |     'product.image.url': 'https://static.wixstatic.com/media/c1b522_0d4234d92cfb4b5891ce2987e49053c7~mv2.png',
-6|wix_list |     'contact.Address[1].Zip': '29841',
-6|wix_list |     'contact.Name.First': 'James',
-6|wix_list |     'contact.Address[0].Street': '608 McKenzie Street',
-6|wix_list |     'product-ids': '["b0b98ffd-f0a8-4d71-b1b2-6d65686c3f93","7b3bff0b-327c-411b-81de-b19c075110ab","65fc3d33-b804-3745-6705-d2336d37c71d"]',
-6|wix_list |     'contact.Address[1].Country': 'US',
-6|wix_list |     'contact.Phone[0]': '8032791217',
-6|wix_list |     'contact.Address[0].Zip': '29841',
-6|wix_list |     'contact.Id': '094b6fc8-3c32-409b-b3ab-871b32a9f527',
-6|wix_list |     'contact.Address[1].City': 'North Augusta',
-6|wix_list |     metaSiteId: 'REDACTED_ROTATE_ME'
-6|wix_list |   }
-6|wix_list | }
+  data: {
+    'contact.Name.Last': 'Arnold',
+    'contact.Address[0].Country': 'US',
+    'product.price': '230.0',
+    'contact.Address[0].City': 'North Augusta',
+    'product.name': '$FRY Bandwidth Miner',
+    'contact.Email[0]': 'prince_edward_21@yahoo.com',
+    'contact.Address[1].Street': '608 McKenzie Street',
+    'product.image.url': 'https://static.wixstatic.com/media/c1b522_0d4234d92cfb4b5891ce2987e49053c7~mv2.png',
+    'contact.Address[1].Zip': '29841',
+    'contact.Name.First': 'James',
+    'contact.Address[0].Street': '608 McKenzie Street',
+    'product-ids': '["b0b98ffd-f0a8-4d71-b1b2-6d65686c3f93","7b3bff0b-327c-411b-81de-b19c075110ab","65fc3d33-b804-3745-6705-d2336d37c71d"]',
+    'contact.Address[1].Country': 'US',
+    'contact.Phone[0]': '8032791217',
+    'contact.Address[0].Zip': '29841',
+    'contact.Id': '094b6fc8-3c32-409b-b3ab-871b32a9f527',
+    'contact.Address[1].City': 'North Augusta',
+    metaSiteId: 'REDACTED_ROTATE_ME'
+  }
+}
 */
 type Product = {
     name: string;
