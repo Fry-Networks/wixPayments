@@ -1,6 +1,6 @@
 import { DeviceModel } from './devices-schema.js';
 import UserModel, { User } from './users-schema.js';
-
+import randomstring from 'randomstring';
 export async function getMongoUser({ address, email }: { address?: string, email?: string }): Promise<User> {
     if (email && address) {
         if (await UserModel.exists({ email: email, address: address })) {
@@ -36,9 +36,11 @@ export async function getMongoUser({ address, email }: { address?: string, email
 
 export async function generateMinerKey(index: string) {
     //create a string of 32 random characters
-    let minerKey = `${index}-${Math.random().toString(36).substring(2, 34)}`;
+    let key = randomstring.generate({ length: 32, charset: 'alpha-numeric', capitalization: 'uppercase' });
+    let minerKey = `${index}-${key}`;
     while (await DeviceModel.exists({ miner_key: minerKey })) {
-        minerKey = `${index}-${Math.random().toString(36).substring(2, 34)}`;
+        key = randomstring.generate({ length: 32, charset: 'alpha-numeric', capitalization: 'uppercase' });
+        minerKey = `${index}-${key}`;
     }
     return minerKey;
 }
