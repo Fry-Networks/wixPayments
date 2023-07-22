@@ -1,0 +1,44 @@
+import { DeviceModel } from './devices-schema';
+import UserModel, { User } from './users-schema';
+
+export async function getMongoUser({ address, email }: { address?: string, email?: string }): Promise<User> {
+    if (email && address) {
+        if (await UserModel.exists({ email: email, address: address })) {
+            return (await UserModel.findOne({ email: email, address: address }))!;
+        } else if (await UserModel.exists({ email: email })) {
+            const user = await UserModel.findOne({ email: email });
+            user.address = address;
+            await user.save();
+            return user;
+        } else if (await UserModel.exists({ address: address })) {
+            const user = await UserModel.findOne({ address: address });
+            user.email = email;
+            await user.save();
+            return user;
+        } else {
+            return await UserModel.create({ email: email, address: address });
+        }
+    } else if (email) {
+        if (await UserModel.exists({ email: email })) {
+            return (await UserModel.findOne({ email: email }))!;
+        } else {
+            return await UserModel.create({ email: email });
+        }
+    } else if (address) {
+        if (await UserModel.exists({ address: address })) {
+            return (await UserModel.findOne({ address: address }))!;
+        } else {
+            return await UserModel.create({ address: address });
+        }
+    }
+    throw new Error("Both email and address are missing");
+}
+
+export async function generateMinerKey(index: string) {
+    //create a string of 32 random characters
+    let minerKey = `${index}-${Math.random().toString(36).substring(2, 34)}`;
+    while (await DeviceModel.exists({ miner_key: minerKey })) {
+        minerKey = `${index}-${Math.random().toString(36).substring(2, 34)}`;
+    }
+    return minerKey;
+}
