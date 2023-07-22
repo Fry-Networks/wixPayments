@@ -4,7 +4,7 @@ import 'dotenv/config'
 import { connect } from './db/connect.js';
 import { generateMinerKey, getMongoUser } from './db/utils.js';
 import { DeviceModel } from './db/devices-schema.js';
-import { sendMail } from 'MailProcessor';
+import { sendMail } from './MailProcessor.js';
 const app = express()
 app.use(bodyparser.json());
 
