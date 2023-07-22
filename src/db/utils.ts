@@ -1,5 +1,5 @@
-import { DeviceModel } from './devices-schema';
-import UserModel, { User } from './users-schema';
+import { DeviceModel } from './devices-schema.js';
+import UserModel, { User } from './users-schema.js';
 
 export async function getMongoUser({ address, email }: { address?: string, email?: string }): Promise<User> {
     if (email && address) {
