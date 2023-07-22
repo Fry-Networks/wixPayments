@@ -1,9 +1,9 @@
 'use server';
 import { google } from 'googleapis';
-import MailComposer from 'nodemailer/lib/mail-composer';
+import MailComposer from 'nodemailer/lib/mail-composer/index.js';
 import credentials from './config/credentials.json';
 import tokens from './config/token.json';
-import { Options } from 'nodemailer/lib/mailer';
+import { Options } from 'nodemailer/lib/mailer/index.js';
 import fs from 'fs';
 import path from 'path';
 
