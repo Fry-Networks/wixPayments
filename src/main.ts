@@ -37,6 +37,8 @@ app.post('/neworder', async function (req, res) {
         const device = await DeviceModel.create({
             user_id: user._id,
             miner_key: minerKey,
+            created_at: new Date(),
+            is_registered: false,
             name: product.name
         });
         await device.save();
