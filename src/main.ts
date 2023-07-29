@@ -5,6 +5,9 @@ import { connect } from './db/connect.js';
 import { generateMinerKey, getMongoUser } from './db/utils.js';
 import { DeviceModel } from './db/devices-schema.js';
 import { sendMail } from './MailProcessor.js';
+
+const baseApiKey = process.env.BASE_API_KEY;
+
 const app = express()
 app.use(bodyparser.json());
 
@@ -51,6 +54,37 @@ app.post('/neworder', async function (req, res) {
 
     await sendMail(email, keysObjects);
 });
+
+app.post('/newdevice', async function (req, res) {
+    const { email, device_name, api_key, device_type } = req.body;
+    if (api_key !== baseApiKey) {
+        res.status(401).send('Unauthorized');
+        return;
+    }
+    const user = (await getMongoUser({email}))!;
+    const minerKey = await generateMinerKey(device_type);
+
+    const device = await DeviceModel.create({
+        user_id: user._id,
+        miner_key: minerKey,
+        created_at: new Date(),
+        is_registered: false,
+        name: device_name
+    });
+    await device.save();
+
+    await sendMail(email, [{
+        key: minerKey,
+        name: device_name
+    }]);
+
+    res.status(200).json({ message: "ok" });
+});
+
+
+
+
+
 
 
 
