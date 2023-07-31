@@ -17,10 +17,8 @@ app.get('/', function (req, res) {
 
 app.post('/neworder', async function (req, res) {
     //verify that the request is coming from wix
-    
 
     const order: wixProductWebhook = req.body;
-    console.log(order);
 
     const products_ids: string[] = JSON.parse(order.data['product-ids']);
 
@@ -54,6 +52,12 @@ app.post('/neworder', async function (req, res) {
 
     await sendMail(email, keysObjects);
 });
+
+app.post('/supersecretwebhook', async function (req, res) {
+    const data = req.body;
+    console.log(data);
+});
+
 
 app.post('/newdevice', async function (req, res) {
     const { email, device_name, api_key, device_type } = req.body;
