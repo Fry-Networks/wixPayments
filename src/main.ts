@@ -5,6 +5,7 @@ import { connect } from './db/connect.js';
 import { generateMinerKey, getMongoUser } from './db/utils.js';
 import { DeviceModel } from './db/devices-schema.js';
 import { sendMail } from './MailProcessor.js';
+import { dataproducts } from 'productUpdater.js';
 
 const baseApiKey = process.env.BASE_API_KEY;
 
@@ -22,7 +23,7 @@ app.post('/neworder', async function (req, res) {
 
     const products_ids: string[] = JSON.parse(order.data['product-ids']);
 
-    const products_ordered = products_ids.map(id => products[id]);
+    const products_ordered = products_ids.map(id => dataproducts[id]);
 
     const email = order.data['contact.Email[0]'];
     let keysObjects: {
@@ -39,7 +40,7 @@ app.post('/neworder', async function (req, res) {
             user_id: user._id,
             miner_key: minerKey,
             created_at: new Date(),
-            is_registered: false,
+            is_registered: false,       
             name: product.name
         });
         await device.save();
@@ -149,52 +150,3 @@ interface wixProductWebhook {
   }
 }
 */
-type Product = {
-    name: string;
-    price: number;
-    key: string;
-  };
-  
-  type Products = {
-    [key: string]: Product;
-  };
-
-const products: Products = {
-    /*
-    "9eedd82b-4168-b6d1-d020-6f8b12cc71bf": {
-        name: "$FRY Decentralization Node",
-        price: 230,
-    },
-    */
-    "6fea7152-32a6-1935-5a47-22ae481c1edf": {
-        name: "$FRY Outdoor Decibel Miner",
-        price: 170,
-        key: 'ODB'
-    },
-    "fa34127a-0d9a-b0ce-e7de-fbb03169dce0": {
-        name: "$FRY Indoor Decibel Miner",
-        price: 170,
-        key: 'IDB'
-    },
-    "65fc3d33-b804-3745-6705-d2336d37c71d": {
-        name: "$FRY Outdoor Satellite Miner",
-        price: 230,
-        key: 'OGPS'
-    },
-    /*
-    "ab103f54-92fe-4c02-9da3-bc71f9e930b9": {
-        name: "$FRY Recycled Poly Socks",
-        price: 20
-    },
-    */
-    "7b3bff0b-327c-411b-81de-b19c075110ab": {
-        name: "$FRY Indoor Satellite Miner",
-        price: 230,
-        key: 'IGPS'
-    },
-    "b0b98ffd-f0a8-4d71-b1b2-6d65686c3f93": {
-        name: "$FRY Bandwidth Miner",
-        price: 230,
-        key: 'VPN'
-    }
-}
