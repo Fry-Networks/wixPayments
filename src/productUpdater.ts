@@ -6,8 +6,6 @@ import axios from 'axios';
 import express from 'express';
 import { ProductModel } from './db/products-schema.js';
 import { connect } from './db/connect.js';
-import { set } from 'mongoose';
-
 const app = express();
 app.use(express.json());
 
@@ -43,7 +41,6 @@ async function fetchAllProducts() {
     } catch (error) {
         console.error('Error fetching products:', error);
     }
-    console.log('Products fetched:', products);
     //check for unicity of keys
     let keys: string[] = [];
     products.forEach((product: any) => {
@@ -88,9 +85,7 @@ async function fetchAllProducts() {
 // Initialize products list and start the server
 async function init() {
     await fetchAllProducts();
-    console.log(dataproducts)
     setInterval(fetchAllProducts, 1000 * 60 * 10);
-    
 }
 
 init();

@@ -5,7 +5,7 @@ import { connect } from './db/connect.js';
 import { generateMinerKey, getMongoUser } from './db/utils.js';
 import { DeviceModel } from './db/devices-schema.js';
 import { sendMail } from './MailProcessor.js';
-import { dataproducts } from 'productUpdater.js';
+import { dataproducts } from './productUpdater.js';
 
 const baseApiKey = process.env.BASE_API_KEY;
 
