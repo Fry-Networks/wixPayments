@@ -6,14 +6,15 @@ export async function connect() {
     if (!uri) {
         throw new Error('MONGO_URI not set!');
     }
-    console.log('Connecting to MongoDB...');
-    await mongoose.connect(uri);
-
-    mongoose.connection.useDb('weather');
-
     mongoose.connection.on('connected', () => {
         console.log('Connected to MongoDB!');
     });
+    console.log('Connecting to MongoDB...');
+    await mongoose.connect(uri);
+
+    mongoose.connection.useDb('main');
+
+    
 
     mongoose.connection.on('error', (err) => {
         console.error(`Mongoose connection error:\n${err.stack}`);
