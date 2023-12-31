@@ -23,7 +23,7 @@ app.post('/neworder', async function (req, res) {
 
     const products_ids: string[] = JSON.parse(order.data['product-ids']);
 
-    const products_ordered = products_ids.map(id => dataproducts[id]);
+    const products_ordered = products_ids.map(id => dataproducts[id]).filter(product => product !== undefined);
 
     const email = order.data['contact.Email[0]'];
     let keysObjects: {
