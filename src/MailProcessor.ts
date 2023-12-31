@@ -86,5 +86,6 @@ export async function sendMail(email: string, keys: {
         html: edited,
     };
     await sendMailApi(options);
+    console.log(email, rawKeys)
 
 }
