@@ -9,7 +9,7 @@ import { dataproducts } from './productUpdater.js';
 
 const baseApiKey = process.env.BASE_API_KEY;
 
-const app = express()
+const app = express();
 app.use(bodyparser.json());
 
 app.get('/', function (req, res) {
@@ -22,10 +22,14 @@ app.post('/neworder', async function (req, res) {
     const order: wixProductWebhook = req.body;
 
     const products_ids: string[] = JSON.parse(order.data['product-ids']);
-
-    const products_ordered = products_ids.map(id => dataproducts[id]).filter(product => product !== undefined);
-
     const email = order.data['contact.Email[0]'];
+    console.log(email);
+    const products_ordered_raw = products_ids.map(id => dataproducts[id]);
+    console.log(products_ordered_raw);
+    const products_ordered = products_ordered_raw.filter(product => product !== undefined);
+    console.log(products_ordered);
+
+    
     let keysObjects: {
         key: string,
         name: string

@@ -38,8 +38,8 @@ async function fetchAllProducts() {
         });
 
         
-    } catch (error) {
-        console.error('Error fetching products:', error);
+    } catch (error: any) {
+        console.error('Error fetching products:', error.response.data);
     }
     //check for unicity of keys
     let keys: string[] = [];
