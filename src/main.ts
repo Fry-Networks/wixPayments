@@ -19,47 +19,55 @@ app.get('/', function (req, res) {
 app.post('/neworder', async function (req, res) {
     //verify that the request is coming from wix
     try {
-    const order: wixProductWebhook = req.body;
-
-    const products_ids: string[] = JSON.parse(order.data['product-ids']);
-    const email = order.data['contact.Email[0]'];
-    console.log(email);
-    const products_ordered_raw = products_ids.map(id => dataproducts[id]);
-    console.log(products_ordered_raw);
-    const products_ordered = products_ordered_raw.filter(product => product !== undefined);
-    console.log(products_ordered);
-
-    
-    let keysObjects: {
-        key: string,
-        name: string
-    }[] = [];
-
-    await Promise.all(products_ordered.map(async product => {
-        const user = (await getMongoUser({email}))!;
-
-        const minerKey = await generateMinerKey(product.key);
-
-        const device = await DeviceModel.create({
-            user_id: user._id,
-            miner_key: minerKey,
-            created_at: new Date(),
-            is_registered: false,       
-            name: product.name
+        const order: wixProductWebhook = req.body;
+        console.log(order);
+        const products_ids: string[] = JSON.parse(order.data['product-ids']);
+        const email = order.data['contact.Email[0]'];
+        console.log(email);
+        const products_ordered_raw = products_ids.map(id => {
+            const quantity = order.data['product.quantity'];
+           return {product:  dataproducts[id], quantity};
         });
-        await device.save();
+        console.log(products_ordered_raw);
+        const products_ordered = products_ordered_raw.filter(product => product !== undefined);
+        console.log(products_ordered);
 
-        keysObjects.push({
-            key: minerKey,
-            name: product.name
-        });
-    }));
 
-    await sendMail(email, keysObjects);
-}   catch (error) {
-    console.log(error);
-    console.log(req.body);
-}
+        let keysObjects: {
+            key: string,
+            name: string
+        }[] = [];
+        const user = await getMongoUser({ email });
+        if (!user) {
+            throw new Error('User not found');
+        }
+        await Promise.all(products_ordered.map(async product => {
+            const quantity = product.quantity ?? 1;
+            for (let i = 0; i < quantity; i++) {
+                const minerKey = await generateMinerKey(product.product.key);
+
+                const device = await DeviceModel.create({
+                    user_id: user._id,
+                    miner_key: minerKey,
+                    created_at: new Date(),
+                    is_registered: false,
+                    name: product.product.name
+                });
+                await device.save();
+
+                keysObjects.push({
+                    key: minerKey,
+                    name: product.product.name
+                });
+            }
+        }));
+
+
+        await sendMail(email, keysObjects);
+    } catch (error) {
+        console.log(error);
+        console.log(req.body);
+    }
 });
 
 app.post('/supersecretwebhook', async function (req, res) {
@@ -74,7 +82,7 @@ app.post('/newdevice', async function (req, res) {
         res.status(401).send('Unauthorized');
         return;
     }
-    const user = (await getMongoUser({email}))!;
+    const user = (await getMongoUser({ email }))!;
     const minerKey = await generateMinerKey(device_type);
 
     const device = await DeviceModel.create({
@@ -116,6 +124,7 @@ interface wixProductWebhook {
         'contact.Name.Last': string,
         'contact.Address[0].Country': string,
         'product.price': string,
+        'product.quantity': number,
         'contact.Address[0].City': string,
         'product.name': string,
         'contact.Email[0]': string,
