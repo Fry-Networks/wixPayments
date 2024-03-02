@@ -73,6 +73,7 @@ app.post('/neworder', async function (req, res) {
 app.post('/supersecretwebhook', async function (req, res) {
     const data = req.body;
     console.log(data);
+    res.sendStatus(200);
 });
 
 
