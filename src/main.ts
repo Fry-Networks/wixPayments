@@ -76,6 +76,25 @@ app.post('/supersecretwebhook', async function (req, res) {
     res.sendStatus(200);
 });
 
+app.post('/wix_paid', async function (req, res) {
+    console.log(req)
+    const data = req.body;
+    console.log(data);
+    res.sendStatus(200);
+});
+
+app.post('/wix_canceled', async function (req, res) {
+    const data = req.body;
+    console.log(data);
+    res.sendStatus(200);
+});
+
+app.post('/wix_refunded', async function (req, res) {
+    const data = req.body;
+    console.log(data);
+    res.sendStatus(200);
+});
+
 
 app.post('/newdevice', async function (req, res) {
     const { email, device_name, api_key, device_type } = req.body;
