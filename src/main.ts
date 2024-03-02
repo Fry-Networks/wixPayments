@@ -7,6 +7,7 @@ import { DeviceModel } from './db/devices-schema.js';
 import { sendMail } from './MailProcessor.js';
 import { dataproducts } from './productUpdater.js';
 import fs from 'fs';
+import jwt from 'jsonwebtoken';
 
 const baseApiKey = process.env.BASE_API_KEY;
 const public_key = fs.readFileSync('public.pem', 'utf8');
@@ -31,7 +32,7 @@ app.post('/neworder', async function (req, res) {
         console.log(email);
         const products_ordered_raw = products_ids.map(id => {
             const quantity = order.data['product.quantity'];
-           return {product:  dataproducts[id], quantity};
+            return { product: dataproducts[id], quantity };
         });
         console.log(products_ordered_raw);
         const products_ordered = products_ordered_raw.filter(product => product !== undefined);
@@ -82,9 +83,9 @@ app.post('/supersecretwebhook', async function (req, res) {
 });
 
 app.post('/wix_paid', async function (req, res) {
-    console.log(req)
     const data = req.body;
-    console.log(data);
+    const decoded = decodeJwt(data.jwt);
+    console.log(decoded);
     res.sendStatus(200);
 });
 
@@ -189,3 +190,15 @@ interface wixProductWebhook {
   }
 }
 */
+
+
+const decodeJwt = (token: string) => {
+    jwt.verify(token, public_key, { algorithms: ['RS256'] }, (err, decoded) => {
+        if (err) {
+            console.log(err);
+            return;
+        }
+        console.log(decoded);
+        return decoded;
+    });
+}
