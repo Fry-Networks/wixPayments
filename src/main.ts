@@ -8,6 +8,7 @@ import { sendMail } from './MailProcessor.js';
 import { dataproducts } from './productUpdater.js';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
+import { Order } from 'types.js';
 
 const baseApiKey = process.env.BASE_API_KEY;
 const public_key = fs.readFileSync('public.pem', 'utf8');
@@ -21,7 +22,7 @@ app.use(bodyparser.text({
 app.get('/', function (req, res) {
     res.send('Hello World')
 })
-
+/*
 app.post('/neworder', async function (req, res) {
     //verify that the request is coming from wix
     try {
@@ -75,33 +76,81 @@ app.post('/neworder', async function (req, res) {
         console.log(req.body);
     }
 });
-
-app.post('/supersecretwebhook', async function (req, res) {
-    const data = req.body;
-    console.log(data);
-    res.sendStatus(200);
-});
+*/
 
 app.post('/wix_paid', async function (req, res) {
-    const data = req.body;
-    const decoded = jwt.decode(data);
-    if(!decoded) return;
-    const str = typeof decoded === 'string' ? decoded : decoded.data
-    const first = JSON.parse(str);
-    const second = JSON.parse(first.data);
-    console.log(second);
     res.sendStatus(200);
+    try {
+        const data = req.body;
+        const decoded = jwt.decode(data);
+        if (!decoded) return;
+        const str = typeof decoded === 'string' ? decoded : decoded.data
+        const first = JSON.parse(str);
+        const second: Order = JSON.parse(first.data);
+        const email = second.buyerInfo.email;
+        const products = second.lineItems.map(item => {
+            const quantity = item.quantity;
+            return { product: dataproducts[item.productId], quantity };
+        });
+        const filtered = products.filter(product => product !== undefined);
+        let keysObjects: {
+            key: string,
+            name: string
+        }[] = [];
+        const user = await getMongoUser({ email });
+        if (!user) {
+            throw new Error('User not found');
+        }
+        await Promise.all(filtered.map(async product => {
+            const quantity = product.quantity ?? 1;
+            for (let i = 0; i < quantity; i++) {
+                const minerKey = await generateMinerKey(product.product.key);
+
+                const device = await DeviceModel.create({
+                    user_id: user._id,
+                    miner_key: minerKey,
+                    created_at: new Date(),
+                    is_registered: false,
+                    name: product.product.name
+                });
+                await device.save();
+
+                keysObjects.push({
+                    key: minerKey,
+                    name: product.product.name
+                });
+            }
+        }));
+
+
+        await sendMail(email, keysObjects);
+    }
+    catch (error) {
+        console.log(error);
+    }
+
+
 });
 
 app.post('/wix_canceled', async function (req, res) {
     const data = req.body;
-    console.log(data);
+        const decoded = jwt.decode(data);
+        if (!decoded) return;
+        const str = typeof decoded === 'string' ? decoded : decoded.data
+        const first = JSON.parse(str);
+        const second = JSON.parse(first.data);
+        console.log(second);
     res.sendStatus(200);
 });
 
 app.post('/wix_refunded', async function (req, res) {
     const data = req.body;
-    console.log(data);
+        const decoded = jwt.decode(data);
+        if (!decoded) return;
+        const str = typeof decoded === 'string' ? decoded : decoded.data
+        const first = JSON.parse(str);
+        const second = JSON.parse(first.data);
+        console.log(second);
     res.sendStatus(200);
 });
 
