@@ -84,6 +84,7 @@ app.post('/supersecretwebhook', async function (req, res) {
 
 app.post('/wix_paid', async function (req, res) {
     const data = req.body;
+    console.log(data);
     const decoded = decodeJwt(data.jwt);
     console.log(decoded);
     res.sendStatus(200);
