@@ -38,7 +38,7 @@ app.post('/wix_paid', async function (req, res) {
             const quantity = item.quantity;
             return { product: dataproducts[item.productId], quantity };
         });
-        const filtered = products.filter(product => product !== undefined);
+        const filtered = products.filter(product => product.product !== undefined);
         let keysObjects: {
             key: string,
             name: string
@@ -87,7 +87,6 @@ app.post('/wix_canceled', async function (req, res) {
     const str = typeof decoded === 'string' ? decoded : decoded.data
     const first = JSON.parse(str);
     const second: Order = JSON.parse(first.data).order;
-    console.log(second);
     const order_no = second.number;
     DeviceModel.deleteMany({ order_no }).exec();
     console.log(`Order ${order_no} canceled`);
@@ -102,7 +101,6 @@ app.post('/wix_refunded', async function (req, res) {
     const str = typeof decoded === 'string' ? decoded : decoded.data
     const first = JSON.parse(str);
     const second: Order = JSON.parse(first.data).order
-    console.log(second);
     const order_no = second.number;
     DeviceModel.deleteMany({ order_no }).exec();
     console.log(`Order ${order_no} refunded`);
