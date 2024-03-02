@@ -6,11 +6,16 @@ import { generateMinerKey, getMongoUser } from './db/utils.js';
 import { DeviceModel } from './db/devices-schema.js';
 import { sendMail } from './MailProcessor.js';
 import { dataproducts } from './productUpdater.js';
+import fs from 'fs';
 
 const baseApiKey = process.env.BASE_API_KEY;
-
+const public_key = fs.readFileSync('public.pem', 'utf8');
 const app = express();
 app.use(bodyparser.json());
+app.use(bodyparser.urlencoded({ extended: true }));
+app.use(bodyparser.text({
+    type: 'text/plain'
+}));
 
 app.get('/', function (req, res) {
     res.send('Hello World')
