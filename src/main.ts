@@ -84,8 +84,12 @@ app.post('/supersecretwebhook', async function (req, res) {
 
 app.post('/wix_paid', async function (req, res) {
     const data = req.body;
-    const decoded = decodeJwt(data);
-    console.log(decoded);
+    const decoded = jwt.decode(data);
+    if(!decoded) return;
+    const str = typeof decoded === 'string' ? decoded : decoded.data
+    const first = JSON.parse(str);
+    const second = JSON.parse(first.data);
+    console.log(second);
     res.sendStatus(200);
 });
 
@@ -191,14 +195,3 @@ interface wixProductWebhook {
 }
 */
 
-
-const decodeJwt = (token: string) => {
-    jwt.verify(token, public_key, { algorithms: ['RS256'] }, (err, decoded) => {
-        if (err) {
-            console.log(err);
-            return;
-        }
-        console.log(decoded);
-        return decoded;
-    });
-}
