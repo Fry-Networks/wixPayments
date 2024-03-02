@@ -20,63 +20,8 @@ app.use(bodyparser.text({
 }));
 
 app.get('/', function (req, res) {
-    res.send('Hello World')
+    res.send('sneaking around huh ?')
 })
-/*
-app.post('/neworder', async function (req, res) {
-    //verify that the request is coming from wix
-    try {
-        const order: wixProductWebhook = req.body;
-        console.log(order);
-        const products_ids: string[] = JSON.parse(order.data['product-ids']);
-        const email = order.data['contact.Email[0]'];
-        console.log(email);
-        const products_ordered_raw = products_ids.map(id => {
-            const quantity = order.data['product.quantity'];
-            return { product: dataproducts[id], quantity };
-        });
-        console.log(products_ordered_raw);
-        const products_ordered = products_ordered_raw.filter(product => product !== undefined);
-        console.log(products_ordered);
-
-
-        let keysObjects: {
-            key: string,
-            name: string
-        }[] = [];
-        const user = await getMongoUser({ email });
-        if (!user) {
-            throw new Error('User not found');
-        }
-        await Promise.all(products_ordered.map(async product => {
-            const quantity = product.quantity ?? 1;
-            for (let i = 0; i < quantity; i++) {
-                const minerKey = await generateMinerKey(product.product.key);
-
-                const device = await DeviceModel.create({
-                    user_id: user._id,
-                    miner_key: minerKey,
-                    created_at: new Date(),
-                    is_registered: false,
-                    name: product.product.name
-                });
-                await device.save();
-
-                keysObjects.push({
-                    key: minerKey,
-                    name: product.product.name
-                });
-            }
-        }));
-
-
-        await sendMail(email, keysObjects);
-    } catch (error) {
-        console.log(error);
-        console.log(req.body);
-    }
-});
-*/
 
 app.post('/wix_paid', async function (req, res) {
     res.sendStatus(200);
@@ -87,7 +32,8 @@ app.post('/wix_paid', async function (req, res) {
         const str = typeof decoded === 'string' ? decoded : decoded.data
         const first = JSON.parse(str);
         const second: Order = JSON.parse(first.data);
-        const email = second.buyerInfo.email;
+        const order_no = second.number;
+        const email = second.billingInfo.address.email;
         const products = second.lineItems.map(item => {
             const quantity = item.quantity;
             return { product: dataproducts[item.productId], quantity };
@@ -109,6 +55,7 @@ app.post('/wix_paid', async function (req, res) {
                 const device = await DeviceModel.create({
                     user_id: user._id,
                     miner_key: minerKey,
+                    order_no,
                     created_at: new Date(),
                     is_registered: false,
                     name: product.product.name
@@ -133,25 +80,31 @@ app.post('/wix_paid', async function (req, res) {
 });
 
 app.post('/wix_canceled', async function (req, res) {
-    const data = req.body;
-        const decoded = jwt.decode(data);
-        if (!decoded) return;
-        const str = typeof decoded === 'string' ? decoded : decoded.data
-        const first = JSON.parse(str);
-        const second = JSON.parse(first.data);
-        console.log(JSON.stringify(second));
     res.sendStatus(200);
+    const data = req.body;
+    const decoded = jwt.decode(data);
+    if (!decoded) return;
+    const str = typeof decoded === 'string' ? decoded : decoded.data
+    const first = JSON.parse(str);
+    const second: Order = JSON.parse(first.data);
+    const order_no = second.number;
+    DeviceModel.deleteMany({ order_no }).exec();
+    console.log(`Order ${order_no} canceled`);
+
 });
 
 app.post('/wix_refunded', async function (req, res) {
-    const data = req.body;
-        const decoded = jwt.decode(data);
-        if (!decoded) return;
-        const str = typeof decoded === 'string' ? decoded : decoded.data
-        const first = JSON.parse(str);
-        const second = JSON.parse(first.data);
-        console.log(JSON.stringify(second));
     res.sendStatus(200);
+    const data = req.body;
+    const decoded = jwt.decode(data);
+    if (!decoded) return;
+    const str = typeof decoded === 'string' ? decoded : decoded.data
+    const first = JSON.parse(str);
+    const second: Order = JSON.parse(first.data);
+    const order_no = second.number;
+    DeviceModel.deleteMany({ order_no }).exec();
+    console.log(`Order ${order_no} refunded`);
+
 });
 
 

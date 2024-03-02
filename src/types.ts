@@ -1,26 +1,24 @@
-export interface BuyerInfo {
+export interface Order {
     id: string;
-    type: string;
-    identityType: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-    email: string;
-    contactId: string;
-  }
-  
-  export interface Address {
-    fullName: {
-      firstName: string;
-      lastName: string;
-    };
-    country: string;
-    subdivision: string;
-    city: string;
-    zipCode: string;
-    phone: string;
-    email: string;
-    addressLine1: string;
+    number: number;
+    dateCreated: string;
+    currency: string;
+    weightUnit: string;
+    totals: Totals;
+    billingInfo: BillingInfo;
+    shippingInfo: ShippingInfo;
+    read: boolean;
+    archived: boolean;
+    paymentStatus: string;
+    fulfillmentStatus: string;
+    lineItems: LineItem[];
+    activities: Activity[];
+    fulfillments: any[]; // Empty array in the given data, specify further if structure is known
+    discount: Discount;
+    buyerLanguage: string;
+    channelInfo: ChannelInfo;
+    enteredBy: EnteredBy;
+    lastUpdated: string;
   }
   
   export interface Totals {
@@ -37,71 +35,56 @@ export interface BuyerInfo {
     paymentMethod: string;
     externalTransactionId: string;
     paymentProviderTransactionId: string;
-    paymentGatewayTransactionId: string;
     address: Address;
     paidDate: string;
-    refundableByPaymentProvider: boolean;
-  }
-  
-  export interface TrackingInfo {
-    trackingNumber: string;
-    shippingProvider: string;
-  }
-  
-  export interface ShipmentDetails {
-    address: Address;
-    trackingInfo: TrackingInfo;
-    discount: string;
-    tax: string;
-    priceData: {
-      taxIncludedInPrice: boolean;
-      price: string;
-    };
   }
   
   export interface ShippingInfo {
     deliveryOption: string;
-    shippingRegion: string;
-    code: string;
+    estimatedDeliveryTime: string;
+    shippingRegion?: string; // Optional as it does not exist in the given JSON structure
     shipmentDetails: ShipmentDetails;
   }
   
-  export interface LineItemOption {
-    option: string;
-    selection: string;
+  export interface Address {
+    fullName: FullName;
+    country: string;
+    city: string;
+    zipCode: string;
+    phone: string;
+    email: string;
   }
   
-  export interface MediaItem {
-    mediaType: string;
-    url: string;
-    width: number;
-    height: number;
-    mediaId: string;
-    id: string;
+  export interface FullName {
+    firstName: string;
+    lastName: string;
+  }
+  
+  export interface ShipmentDetails {
+    address: Address;
+    discount: string;
+    tax: string;
+    priceData: PriceData;
+  }
+  
+  export interface PriceData {
+    taxIncludedInPrice: boolean;
+    price: string;
   }
   
   export interface LineItem {
     index: number;
     quantity: number;
-    price: string;
     name: string;
-    translatedName: string;
     productId: string;
-    totalPrice: string;
     lineItemType: string;
-    options: LineItemOption[];
-    customTextFields: any[];
-    mediaItem: MediaItem;
-    variantId: string;
+    options: any[]; // Empty array in the given data, specify further if structure is known
+    customTextFields: any[]; // Empty array in the given data, specify further if structure is known
+    weight: string;
+    sku: string;
     discount: string;
     tax: string;
-    taxIncludedInPrice: boolean;
-    priceData: {
-      taxIncludedInPrice: boolean;
-      price: string;
-      totalPrice: string;
-    };
-    refundedQuantity: number;
+    priceData: PriceData;
   }
   
   export interface Activity {
@@ -109,25 +92,8 @@ export interface BuyerInfo {
     timestamp: string;
   }
   
-  export interface Coupon {
-    couponId: string;
-    name: string;
-    code: string;
-  }
-  
   export interface Discount {
     value: string;
-    appliedCoupon?: Coupon;
-  }
-  
-  export interface Fulfillment {
-    id: string;
-    dateCreated: string;
-    lineItems: {
-      index: number;
-      quantity: number;
-    }[];
-    trackingInfo: TrackingInfo;
   }
   
   export interface ChannelInfo {
@@ -137,38 +103,5 @@ export interface BuyerInfo {
   export interface EnteredBy {
     id: string;
     identityType: string;
-  }
-  
-  export interface Order {
-    id: string;
-    number: number;
-    dateCreated: string;
-    buyerInfo: BuyerInfo;
-    currency: string;
-    weightUnit: string;
-    totals: Totals;
-    billingInfo: BillingInfo;
-    shippingInfo: ShippingInfo;
-    read: boolean;
-    archived: boolean;
-    paymentStatus: string;
-    fulfillmentStatus: string;
-    lineItems: LineItem[];
-    activities: Activity[];
-    invoiceInfo: {
-      id: string;
-      source: string;
-    };
-    fulfillments: Fulfillment[];
-    discount: Discount;
-    cartId: string;
-    buyerLanguage: string;
-    channelInfo: ChannelInfo;
-    enteredBy: EnteredBy;
-    lastUpdated: string;
-    numericId: string;
-    refunds: any[];
-    checkoutId: string;
-    isInternalOrderCreate: boolean;
   }
   
