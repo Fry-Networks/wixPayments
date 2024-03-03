@@ -8,7 +8,7 @@ import { sendMail } from './MailProcessor.js';
 import { dataproducts } from './productUpdater.js';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
-import { Order } from 'types.js';
+import { Order, RootObject } from 'types.js';
 
 const baseApiKey = process.env.BASE_API_KEY;
 const public_key = fs.readFileSync('public.pem', 'utf8');
@@ -23,7 +23,7 @@ app.get('/', function (req, res) {
     res.send('sneaking around huh ?')
 })
 
-app.post('/wix_paid', async function (req, res) {
+app.post('/wix_fulfill', async function (req, res) {
     res.sendStatus(200);
     try {
         const data = req.body;
@@ -31,12 +31,19 @@ app.post('/wix_paid', async function (req, res) {
         if (!decoded) return;
         const str = typeof decoded === 'string' ? decoded : decoded.data
         const first = JSON.parse(str);
-        const second: Order = JSON.parse(first.data).order
-        const order_no = second.number;
-        const email = second.billingInfo.address.email;
-        const products = second.lineItems.map(item => {
+        const second: RootObject = JSON.parse(first.data);
+        //check if fulfilled
+        if (second.actionEvent.newFulfillmentStatus.toLowerCase() !== 'fulfilled') {
+            console.log('Not fulfilled for ' + second.actionEvent.body.order.number);
+            return;
+        }
+        console.log('Fulfilled for ' + second.actionEvent.body.order.number);
+        const order = second.actionEvent.body.order;
+        const order_no = order.number;
+        const email = order.buyerInfo.email
+        const products = order.lineItems.map(item => {
             const quantity = item.quantity;
-            return { product: dataproducts[item.productId], quantity };
+            return { product: dataproducts[item.id], quantity };
         });
         const filtered = products.filter(product => product.product !== undefined);
         let keysObjects: {
