@@ -107,6 +107,18 @@ app.post('/wix_refunded', async function (req, res) {
 
 });
 
+app.post('/wix_web', async function (req, res) {
+    res.sendStatus(200);
+    const data = req.body;
+    const decoded = jwt.decode(data);
+    if (!decoded) return;
+    const str = typeof decoded === 'string' ? decoded : decoded.data
+    const first = JSON.parse(str);
+    const second = JSON.parse(first.data)
+    console.log(second);
+
+});
+
 
 app.post('/newdevice', async function (req, res) {
     const { email, device_name, api_key, device_type } = req.body;
