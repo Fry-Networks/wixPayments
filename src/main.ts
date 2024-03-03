@@ -115,7 +115,7 @@ app.post('/wix_web', async function (req, res) {
     const str = typeof decoded === 'string' ? decoded : decoded.data
     const first = JSON.parse(str);
     const second = JSON.parse(first.data)
-    console.log(second);
+    console.log(JSON.stringify(second));
 
 });
 
