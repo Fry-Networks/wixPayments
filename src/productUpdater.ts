@@ -1,11 +1,9 @@
 
-const auth = "IST.REDACTED_ROTATE_ME";
-const site_id = "REDACTED_ROTATE_ME";
-
 import axios from 'axios';
 import express from 'express';
 import { ProductModel } from './db/products-schema.js';
 import { connect } from './db/connect.js';
+import 'dotenv/config';
 const app = express();
 app.use(express.json());
 
@@ -22,8 +20,8 @@ async function fetchAllProducts() {
         
         const response = await axios.post(baseUrl, requestBody, {
             headers: {
-                'Authorization': auth,
-                'wix-site-id': site_id
+                'Authorization': process.env.AUTH_TOKEN,
+                'wix-site-id': process.env.SITE_ID
             },
 
         });
@@ -36,7 +34,6 @@ async function fetchAllProducts() {
                 key: product.name.replace("$FRY ", "").split(" ").map((word: string) => word[0]).join("")
             }
         });
-
         
     } catch (error: any) {
         console.error('Error fetching products:', error.response.data);
@@ -90,11 +87,33 @@ async function init() {
 
 init();
 
+export async function fetchOrder(order_id: string){
+    try {
+        const response = await axios.get(`https://www.wixapis.com/ecom/v1/orders/${order_id}`, {
+            headers: {
+                'Authorization': process.env.AUTH_TOKEN,
+                'wix-site-id': process.env.SITE_ID
+            }
+        });
+        return response.data;
+    } catch (error: any) {
+        console.error('Error fetching order:', error.response.data);
+    }
+
+}
 
 
 
 
-type Product = {
+
+
+
+
+
+
+
+
+export type Product = {
     wix_id: string;
     name: string;
     price: number;

@@ -5,10 +5,10 @@ import { connect } from './db/connect.js';
 import { generateMinerKey, getMongoUser } from './db/utils.js';
 import { DeviceModel } from './db/devices-schema.js';
 import { sendMail } from './MailProcessor.js';
-import { dataproducts } from './productUpdater.js';
+import { Product, dataproducts, fetchOrder } from './productUpdater.js';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
-import { Order, RootObject } from 'types.js';
+import { RootObject } from 'types.js';
 
 const baseApiKey = process.env.BASE_API_KEY;
 const public_key = fs.readFileSync('public.pem', 'utf8');
@@ -32,19 +32,20 @@ app.post('/wix_fulfill', async function (req, res) {
         const str = typeof decoded === 'string' ? decoded : decoded.data
         const first = JSON.parse(str);
         const second: RootObject = JSON.parse(first.data);
-        //check if fulfilled
-        if (second.actionEvent.newFulfillmentStatus.toLowerCase() !== 'fulfilled') {
-            console.log('Not fulfilled for ' + second.actionEvent.body.order.number);
-            return;
-        }
-        console.log('Fulfilled for ' + second.actionEvent.body.order.number);
-        const order = second.actionEvent.body.order;
-        const order_no = order.number;
-        const email = order.buyerInfo.email
-        const products = order.lineItems.map(item => {
-            const quantity = item.quantity;
-            return { product: dataproducts[item.id], quantity };
+        const fulfill_data = second.updatedEvent.currentEntity;
+        const order_data = await fetchOrder(fulfill_data.orderId);
+        const email = order_data.order.buyerInfo.email;
+        const order_no = order_data.order.number
+        let products: { product: Product, quantity: number }[] = [];
+        fulfill_data.fulfillments.map(fulfillment => {
+                fulfillment.lineItems.map(lineItem => {
+                    products.push({
+                        product: dataproducts[lineItem.id],
+                        quantity: lineItem.quantity
+                    });
+                });
         });
+
         const filtered = products.filter(product => product.product !== undefined);
         let keysObjects: {
             key: string,
@@ -93,7 +94,7 @@ app.post('/wix_canceled', async function (req, res) {
     if (!decoded) return;
     const str = typeof decoded === 'string' ? decoded : decoded.data
     const first = JSON.parse(str);
-    const second: Order = JSON.parse(first.data).order;
+    const second: any = JSON.parse(first.data).order;
     const order_no = second.number;
     DeviceModel.deleteMany({ order_no }).exec();
     console.log(`Order ${order_no} canceled`);
@@ -107,7 +108,7 @@ app.post('/wix_refunded', async function (req, res) {
     if (!decoded) return;
     const str = typeof decoded === 'string' ? decoded : decoded.data
     const first = JSON.parse(str);
-    const second: Order = JSON.parse(first.data).order
+    const second: any = JSON.parse(first.data).order
     const order_no = second.number;
     DeviceModel.deleteMany({ order_no }).exec();
     console.log(`Order ${order_no} refunded`);
@@ -166,53 +167,3 @@ startApi();
 
 
 export default app
-
-interface wixProductWebhook {
-    data: {
-        'contact.Name.Last': string,
-        'contact.Address[0].Country': string,
-        'product.price': string,
-        'product.quantity': number,
-        'contact.Address[0].City': string,
-        'product.name': string,
-        'contact.Email[0]': string,
-        'contact.Address[1].Street': string,
-        'product.image.url': string,
-        'contact.Address[1].Zip': string,
-        'contact.Name.First': string,
-        'contact.Address[0].Street': string,
-        'product-ids': string,
-        'contact.Address[1].Country': string,
-        'contact.Phone[0]': string,
-        'contact.Address[0].Zip': string,
-        'contact.Id': string,
-        'contact.Address[1].City': string,
-        metaSiteId: string
-    }
-}
-
-/*
-{
-  data: {
-    'contact.Name.Last': 'Arnold',
-    'contact.Address[0].Country': 'US',
-    'product.price': '230.0',
-    'contact.Address[0].City': 'North Augusta',
-    'product.name': '$FRY Bandwidth Miner',
-    'contact.Email[0]': 'prince_edward_21@yahoo.com',
-    'contact.Address[1].Street': '608 McKenzie Street',
-    'product.image.url': 'https://static.wixstatic.com/media/c1b522_0d4234d92cfb4b5891ce2987e49053c7~mv2.png',
-    'contact.Address[1].Zip': '29841',
-    'contact.Name.First': 'James',
-    'contact.Address[0].Street': '608 McKenzie Street',
-    'product-ids': '["b0b98ffd-f0a8-4d71-b1b2-6d65686c3f93","7b3bff0b-327c-411b-81de-b19c075110ab","65fc3d33-b804-3745-6705-d2336d37c71d"]',
-    'contact.Address[1].Country': 'US',
-    'contact.Phone[0]': '8032791217',
-    'contact.Address[0].Zip': '29841',
-    'contact.Id': '094b6fc8-3c32-409b-b3ab-871b32a9f527',
-    'contact.Address[1].City': 'North Augusta',
-    metaSiteId: 'REDACTED_ROTATE_ME'
-  }
-}
-*/
-
