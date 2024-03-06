@@ -4,6 +4,7 @@ import express from 'express';
 import { ProductModel } from './db/products-schema.js';
 import { connect } from './db/connect.js';
 import 'dotenv/config';
+import { OrderDetails } from 'otherTypes.js';
 const app = express();
 app.use(express.json());
 
@@ -87,7 +88,7 @@ async function init() {
 
 init();
 
-export async function fetchOrder(order_id: string){
+export async function fetchOrder(order_id: string): Promise<OrderDetails | undefined>{
     try {
         const response = await axios.get(`https://www.wixapis.com/ecom/v1/orders/${order_id}`, {
             headers: {

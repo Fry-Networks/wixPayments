@@ -35,18 +35,22 @@ app.post('/wix_fulfill', async function (req, res) {
         console.log(JSON.stringify(second));
         const fulfill_data = second.updatedEvent.currentEntity;
         const order_data = await fetchOrder(fulfill_data.orderId);
-        const email = order_data.order.buyerInfo.email;
-        const order_no = order_data.order.number
-        let products: { product: Product, quantity: number }[] = [];
-        fulfill_data.fulfillments.map(fulfillment => {
-                fulfillment.lineItems.map(lineItem => {
-                    products.push({
-                        product: dataproducts[lineItem.id],
-                        quantity: lineItem.quantity
-                    });
-                });
+        console.log(JSON.stringify(order_data));
+        if(!order_data) return;
+        let products_ids: { productId: string, quantity: number }[] = [];
+        order_data.fulfillments.map((fulfillment) => {
+            fulfillment.lineItems.map((item) => {
+                const found = order_data.lineItems.find((orderItem) => orderItem.index === item.index);
+                if(found) products_ids.push({productId: found.productId, quantity: found.quantity});
+            });
         });
-
+        const email = order_data.buyerInfo.email;
+        const order_no = order_data.number
+        const products : {product: Product, quantity: number}[] = [];
+        products_ids.map((product) => {
+            const found = dataproducts[product.productId];
+            if(found) products.push({product: found, quantity: product.quantity});
+        });
         const filtered = products.filter(product => product.product !== undefined);
         let keysObjects: {
             key: string,
