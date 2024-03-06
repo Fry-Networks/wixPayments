@@ -32,6 +32,7 @@ app.post('/wix_fulfill', async function (req, res) {
         const str = typeof decoded === 'string' ? decoded : decoded.data
         const first = JSON.parse(str);
         const second: RootObject = JSON.parse(first.data);
+        console.log(JSON.stringify(second));
         const fulfill_data = second.updatedEvent.currentEntity;
         const order_data = await fetchOrder(fulfill_data.orderId);
         const email = order_data.order.buyerInfo.email;
