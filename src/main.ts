@@ -36,22 +36,78 @@ app.post('/wix_fulfill', async function (req, res) {
         const fulfill_data = second.updatedEvent.currentEntity;
         const order_data = await fetchOrder(fulfill_data.orderId);
         console.log(JSON.stringify(order_data));
-        if(!order_data) return;
+        if (!order_data) return;
         let products_ids: { productId: string, quantity: number }[] = [];
-        order_data.fulfillments.map((fulfillment) => {
-            fulfillment.lineItems.map((item) => {
-                const found = order_data.lineItems.find((orderItem) => orderItem.index === item.index);
-                if(found) products_ids.push({productId: found.productId, quantity: found.quantity});
+        const products: { product: Product, quantity: number }[] = [];
+        if (order_data.fulfillmentStatus === 'FULFILLED') {
+            order_data.lineItems.map((item) => {
+                const found = dataproducts[item.productId];
+                if (found) products.push({ product: found, quantity: item.quantity });
             });
-        });
+        } else {
+            order_data.fulfillments.map((fulfillment) => {
+                fulfillment.lineItems.map((item) => {
+                    const found = order_data.lineItems.find((orderItem) => orderItem.index === item.index);
+                    if (found) products_ids.push({ productId: found.productId, quantity: found.quantity });
+                });
+            });
+            products_ids.map((product) => {
+                const found = dataproducts[product.productId];
+                if (found) products.push({ product: found, quantity: product.quantity });
+            });
+        }
+
         const email = order_data.buyerInfo.email;
         const order_no = order_data.number
-        const products : {product: Product, quantity: number}[] = [];
-        products_ids.map((product) => {
-            const found = dataproducts[product.productId];
-            if(found) products.push({product: found, quantity: product.quantity});
+
+        const existingKeys = await DeviceModel.find({ order_no })
+        const existingKeysMap = new Map<string, {
+            quantity: number,
+            type: string
+        }>();
+        existingKeys.map(key => {
+            const type = key.name;
+            if (existingKeysMap.has(type)) {
+                const current = existingKeysMap.get(type)!;
+                existingKeysMap.set(type, {
+                    quantity: current.quantity + 1,
+                    type
+                });
+            } else {
+                existingKeysMap.set(type, {
+                    quantity: 1,
+                    type
+                });
+            }
         });
-        const filtered = products.filter(product => product.product !== undefined);
+        const currentKeys = new Map<string, {
+            quantity: number,
+            type: string
+        }>();
+        products.map(product => {
+            if(!product.product) return false;
+            const type = product.product.name;
+            if (currentKeys.has(type)) {
+                const current = currentKeys.get(type)!;
+                currentKeys.set(type, {
+                    quantity: current.quantity + product.quantity,
+                    type
+                });
+            } else {
+                currentKeys.set(type, {
+                    quantity: product.quantity,
+                    type
+                });
+            }});
+        const filtered = Array.from(currentKeys).map(([key, value]) => {
+            const existing = existingKeysMap.get(key);
+            if (!existing) return { product: dataproducts[key], quantity: value.quantity };
+            if (existing.quantity < value.quantity) {
+                return { product: dataproducts[key], quantity: value.quantity - existing.quantity };
+            }
+            return false;
+        }).filter(item => item !== false) as { product: Product, quantity: number }[];
+        
         let keysObjects: {
             key: string,
             name: string
