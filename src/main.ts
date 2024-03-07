@@ -5,7 +5,7 @@ import { connect } from './db/connect.js';
 import { generateMinerKey, getMongoUser } from './db/utils.js';
 import { DeviceModel } from './db/devices-schema.js';
 import { sendMail } from './MailProcessor.js';
-import { Product, dataproducts, fetchOrder } from './productUpdater.js';
+import { Product, dataproducts, fetchFulfillments, fetchOrder } from './productUpdater.js';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import { RootObject } from 'types.js';
@@ -34,21 +34,26 @@ app.post('/wix_fulfill', async function (req, res) {
         const second: RootObject = JSON.parse(first.data);
         console.log(JSON.stringify(second));
         const fulfill_data = second.updatedEvent.currentEntity;
-        const order_data = await fetchOrder(fulfill_data.orderId);
-        console.log(JSON.stringify(order_data));
+        const order_data = await fetchOrder("bd6a38f3-00ac-4f53-89da-090c9bb27240");
         if (!order_data) return;
         let products_ids: { productId: string, quantity: number }[] = [];
         const products: { product: Product, quantity: number }[] = [];
-        if (order_data.fulfillmentStatus === 'FULFILLED') {
+        if (order_data.fulfillmentStatus == 'FULFILLED') {
             order_data.lineItems.map((item) => {
-                const found = dataproducts[item.productId];
+      
+                const found = dataproducts[item.catalogReference.catalogItemId];
+        
                 if (found) products.push({ product: found, quantity: item.quantity });
             });
         } else {
-            order_data.fulfillments.map((fulfillment) => {
+            const fulfill_data = await fetchFulfillments(order_data.id);
+            const fulfillments = fulfill_data?.fulfillments;
+            if(!fulfillments) return;
+                fulfillments.map((fulfillment) => {
                 fulfillment.lineItems.map((item) => {
-                    const found = order_data.lineItems.find((orderItem) => orderItem.index === item.index);
-                    if (found) products_ids.push({ productId: found.productId, quantity: found.quantity });
+                    const index = parseInt(item.id.replaceAll('-', '')) -1;
+                    const found = order_data.lineItems[index];
+                    if (found) products_ids.push({ productId: found.catalogReference.catalogItemId, quantity: found.quantity });
                 });
             });
             products_ids.map((product) => {
@@ -101,9 +106,11 @@ app.post('/wix_fulfill', async function (req, res) {
             }});
         const filtered = Array.from(currentKeys).map(([key, value]) => {
             const existing = existingKeysMap.get(key);
-            if (!existing) return { product: dataproducts[key], quantity: value.quantity };
+            const productKey = Object.keys(dataproducts).find((product) => dataproducts[product].name === key)!;
+            const product = dataproducts[productKey];
+            if (!existing) return { product, quantity: value.quantity };
             if (existing.quantity < value.quantity) {
-                return { product: dataproducts[key], quantity: value.quantity - existing.quantity };
+                return { product, quantity: value.quantity - existing.quantity };
             }
             return false;
         }).filter(item => item !== false) as { product: Product, quantity: number }[];
@@ -137,8 +144,7 @@ app.post('/wix_fulfill', async function (req, res) {
                 });
             }
         }));
-
-
+        console.log(keysObjects);
         await sendMail(email, keysObjects);
     }
     catch (error) {

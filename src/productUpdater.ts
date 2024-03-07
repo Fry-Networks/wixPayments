@@ -4,7 +4,8 @@ import express from 'express';
 import { ProductModel } from './db/products-schema.js';
 import { connect } from './db/connect.js';
 import 'dotenv/config';
-import { OrderDetails } from 'otherTypes.js';
+import { Order } from 'otherTypes.js';
+import { OrderWithFulfillments } from 'fulfillTypes.js';
 const app = express();
 app.use(express.json());
 
@@ -88,7 +89,7 @@ async function init() {
 
 init();
 
-export async function fetchOrder(order_id: string): Promise<OrderDetails | undefined>{
+export async function fetchOrder(order_id: string): Promise<Order | undefined>{
     try {
         const response = await axios.get(`https://www.wixapis.com/ecom/v1/orders/${order_id}`, {
             headers: {
@@ -96,9 +97,23 @@ export async function fetchOrder(order_id: string): Promise<OrderDetails | undef
                 'wix-site-id': process.env.SITE_ID
             }
         });
-        return response.data;
+        return response.data.order
     } catch (error: any) {
         console.error('Error fetching order:', error.response.data);
+    }
+
+}
+export async function fetchFulfillments(order_id: string): Promise<OrderWithFulfillments | undefined>{
+    try {
+        const response = await axios.get(`https://www.wixapis.com/ecom/v1/fulfillments/orders/${order_id}`, {
+            headers: {
+                'Authorization': process.env.AUTH_TOKEN,
+                'wix-site-id': process.env.SITE_ID
+            }
+        });
+        return response.data.orderWithFulfillments
+    } catch (error: any) {
+        console.error('Error fetching fulfillments:', error.response.data);
     }
 
 }
