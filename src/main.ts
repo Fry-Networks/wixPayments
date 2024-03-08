@@ -34,7 +34,7 @@ app.post('/wix_fulfill', async function (req, res) {
         const second: RootObject = JSON.parse(first.data);
         console.log(JSON.stringify(second));
         const fulfill_data = second.updatedEvent.currentEntity;
-        const order_data = await fetchOrder("bd6a38f3-00ac-4f53-89da-090c9bb27240");
+        const order_data = await fetchOrder(fulfill_data.orderId);
         if (!order_data) return;
         let products_ids: { productId: string, quantity: number }[] = [];
         const products: { product: Product, quantity: number }[] = [];

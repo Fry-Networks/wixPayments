@@ -6,6 +6,7 @@ export const devicesSchema = new mongoose.Schema({
     order_no: Number,
     created_at: { type: Date, default: Date.now },
     is_registered: { type: Boolean, default: false },
+    enabled: {type: Boolean, default: false},
     registered_at: Date
  
 });
@@ -14,6 +15,7 @@ export interface Device extends mongoose.Document {
     miner_key: string,
     name: string,
     order_no: number,
+    enabled: boolean,
     created_at: Date,
     is_registered: boolean,
     registered_at: Date,
