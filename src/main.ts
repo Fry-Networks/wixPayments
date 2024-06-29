@@ -28,30 +28,41 @@ app.post('/wix_fulfill', async function (req, res) {
     try {
         const data = req.body;
         const decoded = jwt.decode(data);
-        if (!decoded) return;
+        if (!decoded) {
+            console.log('No data');
+            return;
+        }
         const str = typeof decoded === 'string' ? decoded : decoded.data
         const first = JSON.parse(str);
         const second: RootObject = JSON.parse(first.data);
-        console.log(JSON.stringify(second));
+        console.log(second.updatedEvent.currentEntity.orderId);
         const fulfill_data = second.updatedEvent.currentEntity;
         const order_data = await fetchOrder(fulfill_data.orderId);
-        if (!order_data) return;
+        if (!order_data) {
+            console.log('Order not found');
+            return;
+        }
         let products_ids: { productId: string, quantity: number }[] = [];
         const products: { product: Product, quantity: number }[] = [];
         if (order_data.fulfillmentStatus == 'FULFILLED') {
+            console.log('Order entirely fulfilled');
             order_data.lineItems.map((item) => {
-      
+
                 const found = dataproducts[item.catalogReference.catalogItemId];
-        
+
                 if (found) products.push({ product: found, quantity: item.quantity });
             });
         } else {
+            console.log('Order partially fulfilled');
             const fulfill_data = await fetchFulfillments(order_data.id);
             const fulfillments = fulfill_data?.fulfillments;
-            if(!fulfillments) return;
-                fulfillments.map((fulfillment) => {
+            if (!fulfillments) {
+                console.log('No fulfillments');
+                return;
+            }
+            fulfillments.map((fulfillment) => {
                 fulfillment.lineItems.map((item) => {
-                    const index = parseInt(item.id.replaceAll('-', '')) -1;
+                    const index = parseInt(item.id.replaceAll('-', '')) - 1;
                     const found = order_data.lineItems[index];
                     if (found) products_ids.push({ productId: found.catalogReference.catalogItemId, quantity: found.quantity });
                 });
@@ -64,7 +75,7 @@ app.post('/wix_fulfill', async function (req, res) {
 
         const email = order_data.buyerInfo.email;
         const order_no = order_data.number
-
+        console.log(products)
         const existingKeys = await DeviceModel.find({ order_no })
         const existingKeysMap = new Map<string, {
             quantity: number,
@@ -90,7 +101,7 @@ app.post('/wix_fulfill', async function (req, res) {
             type: string
         }>();
         products.map(product => {
-            if(!product.product) return false;
+            if (!product.product) return false;
             const type = product.product.name;
             if (currentKeys.has(type)) {
                 const current = currentKeys.get(type)!;
@@ -103,7 +114,8 @@ app.post('/wix_fulfill', async function (req, res) {
                     quantity: product.quantity,
                     type
                 });
-            }});
+            }
+        });
         const filtered = Array.from(currentKeys).map(([key, value]) => {
             const existing = existingKeysMap.get(key);
             const productKey = Object.keys(dataproducts).find((product) => dataproducts[product].name === key)!;
@@ -114,7 +126,7 @@ app.post('/wix_fulfill', async function (req, res) {
             }
             return false;
         }).filter(item => item !== false) as { product: Product, quantity: number }[];
-        
+
         let keysObjects: {
             key: string,
             name: string
