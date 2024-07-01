@@ -85,6 +85,7 @@ export async function sendMail(email: string, keys: {
         text: 'Your Miner key(s) is/are: ' + rawKeys + 'Please save this email for future reference.',
         html: edited,
     };
+    console.log(options)
     await sendMailApi(options);
     console.log(email, rawKeys)
 

@@ -77,13 +77,13 @@ async function fetchAllProducts() {
         acc[product.wix_id] = product;
         return acc;
     }, {});
-
-
 }
 
 // Initialize products list and start the server
 async function init() {
     await fetchAllProducts();
+    console.log('Products fetched');
+    console.log(dataproducts);
     setInterval(fetchAllProducts, 1000 * 60 * 10);
 }
 
