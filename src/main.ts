@@ -36,6 +36,7 @@ app.post('/wix_fulfill', async function (req, res) {
         const first = JSON.parse(str);
         const second: RootObject = JSON.parse(first.data);
         console.log(second.updatedEvent.currentEntity.orderId);
+        console.log(JSON.stringify(second.updatedEvent));
         const fulfill_data = second.updatedEvent.currentEntity;
         const order_data = await fetchOrder(fulfill_data.orderId);
         if (!order_data) {
