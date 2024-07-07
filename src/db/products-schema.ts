@@ -4,6 +4,7 @@ export const productsSchema = new mongoose.Schema({
     wix_id: String,
     name: String,
     key: String,
+    type: String,
     reward: {
         unverified: { type: Number, default: 0},
         verified: { type: Number, default: 0}
@@ -15,6 +16,7 @@ export interface Product extends mongoose.Document {
     wix_id: string,
     name: string,
     key: string,
+    type: string,
     reward: {
         unverified: number,
         verified: number,

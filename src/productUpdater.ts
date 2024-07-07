@@ -19,7 +19,7 @@ async function fetchAllProducts() {
         const requestBody = {
             includeVariants: true
         };
-        
+
         const response = await axios.post(baseUrl, requestBody, {
             headers: {
                 'Authorization': process.env.AUTH_TOKEN,
@@ -28,15 +28,30 @@ async function fetchAllProducts() {
 
         });
         products = response.data.products
-        .filter((product: any) => product.name.includes("$FRY")).map((product: any) => {
-            return {
-                wix_id: product.id,
-                name: product.name,
-                price: product.price.price,
-                key: product.name.replace("$FRY ", "").split(" ").map((word: string) => word[0]).join("")
-            }
-        });
-        
+            .filter((product: any) => product.name.includes("$FRY")).map((product: any) => {
+                const key = product.name.replace("$FRY ", "").split(" ").map((word: string) => word[0]).join("")
+                let type = 'hardware';
+
+                // Define the conditions for each type
+                if (['BM', 'ISM', 'OSM', 'IDM', 'ODM'].includes(key)) {
+                    type = 'hardware'; // Bandwidth Miner / Indoor & Outdoor Satellite / Indoor & Outdoor Decibel
+                } else if (['HWM', 'LWM', 'OWQM', 'OHWQM', 'OLWQM', 'EM'].includes(key)) {
+                    type = 'apikey'; // High & Low End Weather / Water Quality / Energy
+                } else if (['IWCM', 'OWCM', 'AOWCM', 'AIWCM', 'AISCM', 'AOSCM', 'OWSCM', 'IWSCM', 'AITCM', 'AOTCM'].includes(key)) {
+                    type = 'rtsp'; // All Camera Miners
+                } else if (['IRM', 'IAQM', 'OAQM'].includes(key)) {
+                    type = 'mac'; // Radiation Miner / Indoor & Outdoor Air Quality
+                }
+
+                return {
+                    wix_id: product.id,
+                    name: product.name,
+                    price: product.price.price,
+                    type: type,
+                    key: key,
+                }
+            });
+
     } catch (error: any) {
         console.error('Error fetching products:', error.response.data);
     }
@@ -52,26 +67,26 @@ async function fetchAllProducts() {
     await connect();
     const promises = products.map(async (product: any) => {
         return new Promise(async (resolve, reject) => {
-        if (await ProductModel.exists({ name: product.name })) {
-            const old: Product | null = await ProductModel.findOne({ name: product.name });
-            if (old) {
-                let isTheSame = true;
-                for (let key in old) {
-                    if (old[key as keyof Product] != product[key as keyof Product]) {
-                        isTheSame = false;
+            if (await ProductModel.exists({ name: product.name })) {
+                const old: Product | null = await ProductModel.findOne({ name: product.name });
+                if (old) {
+                    let isTheSame = true;
+                    for (let key in old) {
+                        if (old[key as keyof Product] != product[key as keyof Product]) {
+                            isTheSame = false;
+                        }
+                    }
+                    if (!isTheSame) {
+                        await ProductModel.updateOne({ name: product.name }, product);
                     }
                 }
-                if (!isTheSame) {
-                    await ProductModel.updateOne({ name: product.name }, product);
-                }
+            } else {
+                await ProductModel.create(product);
             }
-        } else {
-            await ProductModel.create(product);
-        }
-        resolve(void 0);
+            resolve(void 0);
         }
         );
-    }); 
+    });
     await Promise.all(promises);
     dataproducts = products.reduce((acc: Products, product: Product) => {
         acc[product.wix_id] = product;
@@ -89,7 +104,7 @@ async function init() {
 
 init();
 
-export async function fetchOrder(order_id: string): Promise<Order | undefined>{
+export async function fetchOrder(order_id: string): Promise<Order | undefined> {
     try {
         const response = await axios.get(`https://www.wixapis.com/ecom/v1/orders/${order_id}`, {
             headers: {
@@ -103,7 +118,7 @@ export async function fetchOrder(order_id: string): Promise<Order | undefined>{
     }
 
 }
-export async function fetchFulfillments(order_id: string): Promise<OrderWithFulfillments | undefined>{
+export async function fetchFulfillments(order_id: string): Promise<OrderWithFulfillments | undefined> {
     try {
         const response = await axios.get(`https://www.wixapis.com/ecom/v1/fulfillments/orders/${order_id}`, {
             headers: {
