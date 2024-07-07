@@ -37,10 +37,12 @@ async function fetchAllProducts() {
                     type = 'hardware'; // Bandwidth Miner / Indoor & Outdoor Satellite / Indoor & Outdoor Decibel
                 } else if (['HWM', 'LWM', 'OWQM', 'OHWQM', 'OLWQM', 'EM'].includes(key)) {
                     type = 'apikey'; // High & Low End Weather / Water Quality / Energy
-                } else if (['IWCM', 'OWCM', 'AOWCM', 'AIWCM', 'AISCM', 'AOSCM', 'OWSCM', 'IWSCM', 'AITCM', 'AOTCM'].includes(key)) {
+                } else if (['IWCM', 'OWCM', 'AOWSCM','AOWCM', 'AIWCM', 'AIWSCM','AISCM', 'AOSCM', 'OWSCM', 'IWSCM', 'AITCM', 'AOTCM'].includes(key)) {
                     type = 'rtsp'; // All Camera Miners
-                } else if (['IRM', 'IAQM', 'OAQM'].includes(key)) {
+                } else if (['IRM', 'IHAQM', 'OHAQM'].includes(key)) {
                     type = 'mac'; // Radiation Miner / Indoor & Outdoor Air Quality
+                } else if (['SDN','RDN', 'SVN'].includes(key)) {
+                    type = 'node'; // Indoor & Outdoor Motion / All Motion
                 }
 
                 return {
