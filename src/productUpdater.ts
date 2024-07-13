@@ -100,7 +100,6 @@ async function fetchAllProducts() {
 async function init() {
     await fetchAllProducts();
     console.log('Products fetched');
-    console.log(dataproducts);
     setInterval(fetchAllProducts, 1000 * 60 * 10);
 }
 
