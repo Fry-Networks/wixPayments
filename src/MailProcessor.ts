@@ -79,7 +79,7 @@ export async function sendMail(email: string, keys: {
 
 
     const options = {
-        from: 'contact@fryfoundation.com',
+        from: 'no-reply@frynetworks.com',
         to: email,
         subject: 'Miner Key(s)',
         text: 'Your Miner key(s) is/are: ' + rawKeys + 'Please save this email for future reference.',
