@@ -30,19 +30,17 @@ async function fetchAllProducts() {
         products = response.data.products
             .filter((product: any) => product.name.includes("$FRY")).map((product: any) => {
                 const key = product.name.replace("$FRY ", "").split(" ").map((word: string) => word[0]).join("")
-                let type = 'hardware';
+                let type = 'mac';
 
                 // Define the conditions for each type
-                if (['BM', 'ISM', 'OSM', 'IDM', 'ODM'].includes(key)) {
+                if (['BM', 'ISM', 'OSM', 'IDM', 'ODM', 'CN','SDN','RDN', 'SVN'].includes(key)) {
                     type = 'hardware'; // Bandwidth Miner / Indoor & Outdoor Satellite / Indoor & Outdoor Decibel
                 } else if (['HWM', 'LWM', 'OWQM', 'OHWQM', 'OLWQM', 'EM'].includes(key)) {
                     type = 'apikey'; // High & Low End Weather / Water Quality / Energy
                 } else if (['IWCM', 'OWCM', 'AOWSCM','AOWCM', 'AIWCM', 'AIWSCM','AISCM', 'AOSCM', 'OWSCM', 'IWSCM', 'AITCM', 'AOTCM'].includes(key)) {
                     type = 'rtsp'; // All Camera Miners
-                } else if (['IRM', 'IHAQM', 'OHAQM'].includes(key)) {
+                } else if (['IRM', 'IHAQM', 'OHAQM','ILAQM'].includes(key)) {
                     type = 'mac'; // Radiation Miner / Indoor & Outdoor Air Quality
-                } else if (['SDN','RDN', 'SVN'].includes(key)) {
-                    type = 'node'; // Indoor & Outdoor Motion / All Motion
                 }
 
                 return {
