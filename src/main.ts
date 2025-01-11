@@ -134,6 +134,9 @@ app.post("/wix_fulfill", async function (req, res) {
         });
       }
     });
+
+    console.log(currentKeys);
+
     const filtered = Array.from(currentKeys)
       .map(([key, value]) => {
         const existing = existingKeysMap.get(key);
