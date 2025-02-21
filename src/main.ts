@@ -14,6 +14,7 @@ import {
 import fs from "fs";
 import jwt from "jsonwebtoken";
 import { RootObject } from "types.js";
+import { KeyObject } from "crypto";
 
 const baseApiKey = process.env.BASE_API_KEY;
 const public_key = fs.readFileSync("public.pem", "utf8");
@@ -194,7 +195,10 @@ app.post("/wix_fulfill", async function (req, res) {
       })
     );
     console.log(keysObjects);
-    await sendMail(email, keysObjects);
+
+    if (keysObjects.length > 0) {
+      await sendMail(email, keysObjects);
+    }
   } catch (error) {
     console.log(error);
   }
