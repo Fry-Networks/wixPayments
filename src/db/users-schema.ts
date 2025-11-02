@@ -2,6 +2,7 @@ import mongoose, { mongo } from 'mongoose';
 export const usersSchema = new mongoose.Schema({
     email: { type: String, default: ""},
     address: {type: String, default: ""},
+    do_not_email: { type: Boolean, default: false },
     byod: {
         licenses: { type: [String], default: [] },
         payments: { type: [Date], default: [] }
@@ -12,6 +13,7 @@ export const usersSchema = new mongoose.Schema({
 export interface User extends mongoose.Document {
     email: string,
     address: string,
+    do_not_email?: boolean,    
     byod: {
         licenses: string[],
         payments: Date[]
