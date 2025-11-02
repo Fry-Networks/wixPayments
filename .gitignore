@@ -1,4 +1,17 @@
-node_modules
-build
+# Environment files (use 1Password instead)
+.env*
+.1p.env*
+
+# Local secrets and credentials (managed in 1Password)
+src/config/credentials.json
+src/config/token.json
+
+# Node modules and build artifacts
+node_modules/
+build/
 /config
-config
+config/
+
+# OS files
+.DS_Store
+package-lock.json

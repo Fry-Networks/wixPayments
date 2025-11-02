@@ -1,0 +1,62 @@
+### New product names on wix :
+
+- Fry AI Edge Agent
+- Fry Storage Validator Node
+- Fry Storage Node
+- Fry Compute Node (prev known as Rewards Dec. node)
+- Fry Outdoor Low-End Water Quality Sensor
+- Fry Outdoor High-End Water Quality Sensor
+- Fry Indoor High-End Air Quality Sensor
+- Fry Outdoor High-End Air Quality Sensor
+- Fry Indoor Low-End Air Quality Sensor
+- Fry Outdoor Mid-End Air Quality Sensor
+- Fry Indoor Mid-End Air Quality Sensor
+- Fry Energy Gateway
+- Fry Indoor Radiation Sensor
+- Fry AI Outdoor Weather Station Camera
+- Fry AI Indoor Weather Station Camera
+- Fry AI Outdoor Wildlife Camera
+- Fry AI Indoor Wildlife Camera
+- Fry AI Outdoor Sky Camera
+- Fry AI Indoor Sky Camera
+- Fry AI Outdoor Traffic Camera
+- Fry AI Indoor Traffic Camera
+- Fry High-End Weather Station
+- Fry Low-End Weather Station
+- Fry Outdoor Noise Sensor (prev known as outdoor decibel)
+- Fry Indoor Noise Sensor (prev known as indoor decibel)
+- Fry Outdoor Satellite Sensor
+- Fry Indoor Satellite Sensor
+- Fry Bandwidth Gateway
+
+### Original names :
+
+- $FRY Outdoor Low-End Water Quality Miner
+- $FRY AI Outdoor Weather Station Camera Miner
+- $FRY Indoor High-End Air Quality Miner
+- $FRY Indoor Radiation Miner
+- $FRY AI Outdoor Wildlife Camera Miner
+- $FRY AI Outdoor Traffic Camera Miner
+- $FRY Indoor Decibel Miner
+- $FRY Outdoor Satellite Miner
+- $FRY Bandwidth Miner
+- $FRY Storage Validator Node
+- $FRY Outdoor Mid-End Air Quality Miner
+- $FRY Indoor Mid-End Air Quality Miner
+- $FRY Energy Miner
+- $FRY AI Outdoor Sky Camera Miner
+- $FRY AI Indoor Traffic Camera Miner
+- $FRY High-End Weather Miner
+- $FRY Outdoor High-End Air Quality Miner
+- $FRY Storage Decentralization Node
+- $FRY Reward Decentralization Node
+- $FRY AI Indoor Wildlife Camera Miner
+- $FRY Low-End Weather Miner
+- $FRY AI Indoor Weather Station Camera Miner
+- $FRY Indoor Satellite Miner
+- $FRY Indoor Low-End Air Quality Miner
+- $FRY Outdoor High-End Water Quality Miner
+- $FRY AI Indoor Sky Camera Miner
+- $FRY Outdoor Decibel Miner
+- $FRY Contributor Node
+- $FRY AI Edge Miner
