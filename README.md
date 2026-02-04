@@ -324,7 +324,7 @@ For AI Edge Miners, emails contain:
 npm run dev          # Start development server with hot reload
 npm run start        # Start production server
 npm run build        # Compile TypeScript to build/
-npm run sync         # Git pull, build, and PM2 restart
+npm run sync         # Git pull and build
 npm run test         # Run test suite (placeholder)
 
 # AI Miner CLI Tools
@@ -367,26 +367,26 @@ src/
 
 ## Production Deployment
 
-### PM2 Process Management
+### Docker Compose
 
 ```bash
-# Start with PM2
-pm2 start ecosystem.config.cjs
+# Build the image
+docker compose build
 
-# Restart application
-pm2 restart wix_listen
+# Start the service
+docker compose up -d
 
 # Monitor logs
-pm2 logs wix_listen
+docker compose logs -f wix_payments
 
-# Quick sync and restart
-npm run sync
+# Rebuild and restart after updates
+docker compose up -d --build
 ```
 
 ### Environment Management
 
 - **Development**: Uses `.1p.env.dev` with 1Password CLI
-- **Production**: Uses `.1p.env.prod` with 1Password CLI
+- **Production (Docker)**: Uses `docker-compose.yml` with `op://` references resolved by `op run`
 - **Security**: All sensitive values stored in 1Password vaults
 
 ### SSL/TLS Configuration
@@ -455,6 +455,15 @@ npm run sync
 - **HTTPS**: Encrypted communication for webhook endpoints
 - **Input Validation**: Sanitize all webhook payloads
 - **Rate Limiting**: Implement for public endpoints
+- **Webhook Request Signing (recommended)**: Set `WEBHOOK_SIGNING_SECRET` to require HMAC signatures on `/wix_fulfill`, `/wix_canceled`, `/wix_refunded`, and `/wix_web`.
+  - Required headers: `x-api-key`, `x-timestamp` (unix seconds), `x-nonce` (unique per request), `x-signature` (`v1=<hex>`).
+  - Signature base string: `${x-timestamp}.${HTTP_METHOD}.${PATH}.${x-nonce}.<raw request body bytes>`
+  - Signature algorithm: `HMAC-SHA256` with `WEBHOOK_SIGNING_SECRET`, hex encoded.
+  - Node example:
+    - `const ts = Math.floor(Date.now() / 1000); const nonce = crypto.randomBytes(16).toString("hex");`
+    - `const body = JSON.stringify(payload); const base = ts + ".POST./wix_fulfill." + nonce + "." + body;`
+    - `const sig = crypto.createHmac("sha256", process.env.WEBHOOK_SIGNING_SECRET).update(base).digest("hex");`
+    - Send `x-signature: v1=<hex>` along with `x-timestamp` and `x-nonce`.
 
 ### Data Protection
 
@@ -474,7 +483,7 @@ npm run sync
 
 ### Emergency Procedures
 
-- **Service Restart**: `pm2 restart wix_listen`
+- **Service Restart**: `docker compose restart wix_payments`
 - **Database Recovery**: Use MongoDB backup procedures
 - **Email Service Issues**: Verify Gmail API status and credentials
 - **Webhook Failures**: Check Wix webhook configuration and connectivity

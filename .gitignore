@@ -15,3 +15,8 @@ config/
 # OS files
 .DS_Store
 package-lock.json
+/bandwidth-airdrop-exports
+/logs
+/nginx
+event.js.*
+*.log

@@ -1,0 +1,62 @@
+services:
+  wix_payments:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wix_payments:prod
+    container_name: wix_payments
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3011:3011"
+    environment:
+      NODE_ENV: production
+      PORT: "3011"
+      PUBLIC_BASE_URL: "https://frynetworks.com"
+      LOG_DIR: /app/logs
+      MONGO_CA_CERT_PATH: /etc/ssl/mongo/mongo-ca.crt
+      BASE_API_KEY: "op://wixPayments/wix-payments-api-key/password"
+      MONGO_URI: "op://wixPayments/wix-payments-mongodb/database"
+      AUTH_TOKEN: "op://wixPayments/wix-auth-token/password"
+      SITE_ID: "op://wixPayments/wix-site-id/password"
+      EMAIL_ADDRESS: "op://wixPayments/admin-email/password"
+      UNSUBSCRIBE_SECRET: "op://wixPayments/UNSUBSCRIBE_SECRET/password"
+      WEBHOOK_SIGNING_SECRET: "op://wixPayments/WEBHOOK_SIGNING_SECRET/password"
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    command: ["node", "build/main.js"]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const http=require('http');const port=process.env.PORT||3011;const req=http.get({host:'127.0.0.1',port,path:'/health',timeout:4000},res=>{process.exit(res.statusCode===200?0:1)});req.on('error',()=>process.exit(1));req.on('timeout',()=>{req.destroy();process.exit(1);});\""
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/appuser/.config:uid=1001,gid=1001,mode=0700
+    volumes:
+      - ${MONGO_CA_CERT_PATH}:/etc/ssl/mongo/mongo-ca.crt:ro
+      - ./logs:/app/logs
+    secrets:
+      - source: op_service_account_token
+        target: op_service_account_token
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+
+secrets:
+  op_service_account_token:
+    file: /etc/opt/wix/op_service_account_token

@@ -12,7 +12,8 @@
     "ai-miner-cli": "op run --env-file ./.1p.env.dev -- node --import ./register-ts-node.js src/ai-edge-miner/run-cli.ts",
     "ai-miner-cli:v2": "op run --env-file ./.1p.env.dev -- node --import ./register-ts-node.js src/ai-edge-miner-2/cli/index.ts",
     "ai-miner-cli:build": "op run --env-file ./.1p.env.prod -- tsc && node build/ai-edge-miner/run-cli.js",
-    "sync": "git pull && tsc && op run --env-file ./.1p.env.prod -- pm2 restart wix_listen"
+    "bandwidth-airdrop": "op run --env-file ./.1p.env.dev -- node --import ./register-ts-node.js src/bandwidth-airdrop/cli.ts",
+    "sync": "git pull && tsc"
   },
   "keywords": [],
   "author": "",

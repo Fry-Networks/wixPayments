@@ -1,0 +1,11 @@
+.DS_Store
+.git
+.gitignore
+*.log
+.1p.env.*
+bandwidth-airdrop-exports
+build
+node_modules
+server.cert
+server.key
+logs
