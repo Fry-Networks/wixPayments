@@ -16,6 +16,8 @@ import {
 import fs from "fs";
 import jwt from "jsonwebtoken";
 import cron from "node-cron";
+import { createHmac, timingSafeEqual } from "crypto";
+import { log } from "./logger.js";
 import { simulateAIMinerGeneration } from "./ai-edge-miner-2/service/simulation.js";
 import { generateAIMinerKeysForEligibleUsers } from "./ai-edge-miner-2/service/keys.js";
 import { migrateDeviceFields } from "./ai-edge-miner-2/migration/migrate-fields.js";
@@ -31,8 +33,12 @@ const baseApiKey = secrets.baseApiKey;
 const public_key = fs.readFileSync("public.pem", "utf8");
 const app = express();
 // Switched from bodyparser.text to bodyparser.json to handle Velo events
-app.use(bodyparser.json());
-app.use(bodyparser.urlencoded({ extended: true }));
+type RequestWithRawBody = express.Request & { rawBody?: Buffer };
+function rawBodySaver(req: express.Request, _res: express.Response, buf: Buffer) {
+  (req as RequestWithRawBody).rawBody = buf;
+}
+app.use(bodyparser.json({ verify: rawBodySaver }));
+app.use(bodyparser.urlencoded({ extended: true, verify: rawBodySaver }));
 /*
 // This parser is for the old JWT-based webhooks and is no longer needed.
 app.use(
@@ -127,7 +133,6 @@ app.post("/test-email", async function (req, res) {
 // Health check endpoint
 app.get("/health", function (req, res) {
   const timestamp = new Date().toISOString();
-  log.info(`💓 HEALTH CHECK - Server health check requested`);
 
   res.status(200).json({
     status: "healthy",
@@ -573,48 +578,145 @@ app.post("/monitor-registrations", async function (req, res) {
   }
 });
 
-// Enhanced logging utility
-const log = {
-  info: (message: string, data?: any) => {
-    const timestamp = new Date().toISOString();
-    console.log(
-      `[${timestamp}] ℹ️  ${message}`,
-      data ? JSON.stringify(data, null, 2) : ""
-    );
-  },
-  success: (message: string, data?: any) => {
-    const timestamp = new Date().toISOString();
-    console.log(
-      `[${timestamp}] ✅ ${message}`,
-      data ? JSON.stringify(data, null, 2) : ""
-    );
-  },
-  warning: (message: string, data?: any) => {
-    const timestamp = new Date().toISOString();
-    console.log(
-      `[${timestamp}] ⚠️  ${message}`,
-      data ? JSON.stringify(data, null, 2) : ""
-    );
-  },
-  error: (message: string, error?: any) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ❌ ${message}`);
-    if (error) {
-      if (error.message) console.log(`   Error: ${error.message}`);
-      if (error.response?.data)
-        console.log(`   Response: ${JSON.stringify(error.response.data)}`);
-      if (error.stack && secrets.nodeEnv === "development")
-        console.log(`   Stack: ${error.stack}`);
+function redactHeaders(headers: Record<string, unknown>): Record<string, unknown> {
+  const copy: Record<string, unknown> = { ...headers };
+  for (const key of Object.keys(copy)) {
+    const lower = key.toLowerCase();
+    if (
+      lower === "x-api-key" ||
+      lower === "x-signature" ||
+      lower === "x-timestamp" ||
+      lower === "x-nonce"
+    ) {
+      copy[key] = "[REDACTED]";
     }
-  },
-  step: (step: number, message: string, data?: any) => {
-    const timestamp = new Date().toISOString();
-    console.log(
-      `[${timestamp}] 🔄 Step ${step}: ${message}`,
-      data ? JSON.stringify(data, null, 2) : ""
-    );
-  },
-};
+  }
+  return copy;
+}
+
+function getHeader(req: express.Request, name: string): string | undefined {
+  const value = req.headers[name.toLowerCase()];
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value[0];
+  return undefined;
+}
+
+function parseSignature(value: string | undefined): string | undefined {
+  const trimmed = (value || "").trim();
+  if (!trimmed) return undefined;
+  const match = trimmed.match(/^v1=([0-9a-fA-F]+)$/);
+  return match ? match[1] : trimmed;
+}
+
+function safeEqualHex(aHex: string, bHex: string): boolean {
+  if (!aHex || !bHex) return false;
+  if (aHex.length !== bHex.length) return false;
+  if (aHex.length % 2 !== 0) return false;
+  if (!/^[0-9a-fA-F]+$/.test(aHex)) return false;
+  if (!/^[0-9a-fA-F]+$/.test(bHex)) return false;
+  const a = Buffer.from(aHex, "hex");
+  const b = Buffer.from(bHex, "hex");
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+function isTimestampFresh(timestampSec: number, toleranceSec: number): boolean {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const delta = Math.abs(nowSec - timestampSec);
+  return delta <= toleranceSec;
+}
+
+const webhookNonceCache = new Map<string, number>();
+function cleanupNonceCache(timestampSec: number, toleranceSec: number) {
+  const windowStart = timestampSec - toleranceSec;
+  for (const [key, ts] of webhookNonceCache) {
+    if (ts < windowStart) {
+      webhookNonceCache.delete(key);
+    } else {
+      break;
+    }
+  }
+}
+
+function wasNonceSeen(nonce: string, timestampSec: number, toleranceSec: number): boolean {
+  cleanupNonceCache(timestampSec, toleranceSec);
+  return webhookNonceCache.has(`${timestampSec}:${nonce}`);
+}
+
+function storeNonce(nonce: string, timestampSec: number) {
+  webhookNonceCache.set(`${timestampSec}:${nonce}`, timestampSec);
+
+  const maxEntries = 5000;
+  while (webhookNonceCache.size > maxEntries) {
+    const oldest = webhookNonceCache.keys().next().value as string | undefined;
+    if (!oldest) break;
+    webhookNonceCache.delete(oldest);
+  }
+}
+
+function verifyWebhookSignature(
+  req: RequestWithRawBody,
+  requestId: string
+): { ok: boolean; reason?: string } {
+  const signingSecret = secrets.webhookSigningSecret;
+  if (!signingSecret) return { ok: true };
+
+  const timestampHeader = getHeader(req, "x-timestamp");
+  const signatureHeader = getHeader(req, "x-signature");
+  const nonceHeader = getHeader(req, "x-nonce");
+
+  const signatureHex = parseSignature(signatureHeader);
+  if (!timestampHeader || !signatureHex || !nonceHeader) {
+    return { ok: false, reason: "Missing x-timestamp, x-nonce, or x-signature" };
+  }
+
+  const timestampRaw = Number(timestampHeader);
+  if (!Number.isFinite(timestampRaw) || !Number.isInteger(timestampRaw)) {
+    return { ok: false, reason: "Invalid x-timestamp" };
+  }
+
+  if (timestampRaw > 1_000_000_000_000) {
+    return { ok: false, reason: "x-timestamp must be unix seconds (not ms)" };
+  }
+  const timestampSec = timestampRaw;
+  const toleranceSec = 300;
+  if (!isTimestampFresh(timestampSec, toleranceSec)) {
+    return { ok: false, reason: "Stale x-timestamp" };
+  }
+
+  const nonce = nonceHeader.trim();
+  if (!nonce) {
+    return { ok: false, reason: "Invalid x-nonce" };
+  }
+
+  const rawBody = req.rawBody ?? Buffer.from("");
+  const hmac = createHmac("sha256", signingSecret);
+  hmac.update(String(timestampSec));
+  hmac.update(".");
+  hmac.update(req.method.toUpperCase());
+  hmac.update(".");
+  hmac.update(req.path);
+  hmac.update(".");
+  hmac.update(nonce);
+  hmac.update(".");
+  hmac.update(rawBody);
+  const expectedHex = hmac.digest("hex");
+
+  if (!safeEqualHex(expectedHex, signatureHex)) {
+    log.error(`🔒 SIGNATURE FAILED [${requestId}] - Invalid webhook signature`, {
+      path: req.path,
+      method: req.method,
+    });
+    return { ok: false, reason: "Invalid signature" };
+  }
+
+  if (wasNonceSeen(nonce, timestampSec, toleranceSec)) {
+    return { ok: false, reason: "Replay detected (nonce)" };
+  }
+  storeNonce(nonce, timestampSec);
+
+  return { ok: true };
+}
 
 app.post("/wix_fulfill", async function (req, res) {
   const requestId = Math.random().toString(36).substr(2, 9);
@@ -626,6 +728,13 @@ app.post("/wix_fulfill", async function (req, res) {
   const apiKey = req.headers["x-api-key"];
   if (apiKey !== baseApiKey) {
     log.error(`🔒 AUTHENTICATION FAILED [${requestId}] - Invalid API key`);
+    return res.status(401).send("Unauthorized");
+  }
+  const signatureCheck = verifyWebhookSignature(req as RequestWithRawBody, requestId);
+  if (!signatureCheck.ok) {
+    log.error(
+      `🔒 AUTHENTICATION FAILED [${requestId}] - ${signatureCheck.reason || "Invalid signature"}`
+    );
     return res.status(401).send("Unauthorized");
   }
   log.success(`🔒 AUTHENTICATION SUCCESS [${requestId}] - API key validated`);
@@ -1071,6 +1180,13 @@ app.post("/wix_canceled", async function (req, res) {
     );
     return res.status(401).send("Unauthorized");
   }
+  const signatureCheck = verifyWebhookSignature(req as RequestWithRawBody, requestId);
+  if (!signatureCheck.ok) {
+    log.error(
+      `🔒 AUTHENTICATION FAILED [${requestId}] - ${signatureCheck.reason || "Invalid signature"}`
+    );
+    return res.status(401).send("Unauthorized");
+  }
   log.success(
     `🔒 AUTHENTICATION SUCCESS [${requestId}] - Cancellation webhook authenticated`
   );
@@ -1118,6 +1234,13 @@ app.post("/wix_refunded", async function (req, res) {
   if (apiKey !== baseApiKey) {
     log.error(
       `🔒 AUTHENTICATION FAILED [${requestId}] - Invalid API key for refund`
+    );
+    return res.status(401).send("Unauthorized");
+  }
+  const signatureCheck = verifyWebhookSignature(req as RequestWithRawBody, requestId);
+  if (!signatureCheck.ok) {
+    log.error(
+      `🔒 AUTHENTICATION FAILED [${requestId}] - ${signatureCheck.reason || "Invalid signature"}`
     );
     return res.status(401).send("Unauthorized");
   }
@@ -1169,6 +1292,13 @@ app.post("/wix_web", async function (req, res) {
     );
     return res.status(401).send("Unauthorized");
   }
+  const signatureCheck = verifyWebhookSignature(req as RequestWithRawBody, requestId);
+  if (!signatureCheck.ok) {
+    log.error(
+      `🔒 AUTHENTICATION FAILED [${requestId}] - ${signatureCheck.reason || "Invalid signature"}`
+    );
+    return res.status(401).send("Unauthorized");
+  }
   log.success(
     `🔒 AUTHENTICATION SUCCESS [${requestId}] - Debug webhook authenticated`
   );
@@ -1179,7 +1309,7 @@ app.post("/wix_web", async function (req, res) {
   );
 
   log.info(`🔍 RAW WEBHOOK PAYLOAD [${requestId}]`, {
-    headers: req.headers,
+    headers: redactHeaders(req.headers as Record<string, unknown>),
     body: req.body,
     method: req.method,
     url: req.url,
@@ -1423,8 +1553,10 @@ async function startApi() {
   }
 
   app.listen(port, () => {
-    console.log(`Listening on port ${port}`);
-    log.info(`🚀 SERVER STARTED - AI Edge Miner system ready on port ${port}`);
+    log.success(`SERVER STARTED - Wix payments webhook listener ready`, {
+      port,
+    });
+    log.info(`AI Miner monitoring service initialized (hourly schedule)`);
   });
 }
 

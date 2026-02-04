@@ -8,6 +8,7 @@ import { dirname } from 'path';
 import { execSync } from 'child_process';
 import { redactEmail, redactKey, redactToken } from './redact-utils.js';
 import { secrets } from './config/secrets.js';
+import { log } from './logger.js';
 import jwt from 'jsonwebtoken';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,10 +22,9 @@ function getSecretDocument(title: string, vault: string): any {
         return JSON.parse(result);
     } catch (error: any) {
         const message = error?.message || String(error);
-        console.error(`❌ Failed to retrieve secret document from 1Password: ${title} (vault: ${vault})`);
-        console.error(`   Error: ${message}`);
-        console.error('   Ensure 1Password CLI is installed and you are signed in (op signin).');
-        console.error('   Also ensure the document exists in the specified vault.');
+        log.error(`Failed to retrieve secret document from 1Password: ${title} (vault: ${vault})`, error);
+        log.error('Ensure 1Password CLI is installed and you are signed in (op signin).');
+        log.error('Also ensure the document exists in the specified vault.');
         throw error;
     }
 }
@@ -66,33 +66,8 @@ function buildUnsubscribeUrl(email: string): string {
     return `${base}/unsubscribe?token=${encodeURIComponent(token)}`;
 }
 
-// Enhanced email logging utility
-const emailLog = {
-    info: (message: string, data?: any) => {
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] 📧 ${message}`, data ? JSON.stringify(data, null, 2) : '');
-    },
-    success: (message: string, data?: any) => {
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] ✅📧 ${message}`, data ? JSON.stringify(data, null, 2) : '');
-    },
-    warning: (message: string, data?: any) => {
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] ⚠️📧 ${message}`, data ? JSON.stringify(data, null, 2) : '');
-    },
-    error: (message: string, error?: any) => {
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] ❌📧 ${message}`);
-        if (error) {
-            if (error.message) console.log(`   📧 Error: ${error.message}`);
-            if (error.code) console.log(`   📧 Code: ${error.code}`);
-            if (error.response?.data) console.log(`   📧 Response: ${JSON.stringify(error.response.data)}`);
-        }
-    }
-};
-
 export const sendMailApi = async (options: any): Promise<any> => {
-    emailLog.info(`GMAIL API CALL - Attempting to send email`, { 
+    log.detail(`GMAIL API CALL - Attempting to send email`, { 
         to: redactEmail(options.to), 
         subject: options.subject,
         hasHtml: !!options.html,
@@ -110,7 +85,7 @@ export const sendMailApi = async (options: any): Promise<any> => {
             },
         });
         
-        emailLog.success(`GMAIL API SUCCESS - Email sent successfully`, { 
+        log.detail(`GMAIL API SUCCESS - Email sent successfully`, { 
             to: redactEmail(options.to),
             messageId: result.data.id,
             threadId: result.data.threadId
@@ -118,13 +93,13 @@ export const sendMailApi = async (options: any): Promise<any> => {
         
         return result;
     } catch (error: any) {
-        emailLog.error(`GMAIL API ERROR - Failed to send email to ${redactEmail(options.to)}`, error);
+        log.error(`GMAIL API ERROR - Failed to send email to ${redactEmail(options.to)}`, error);
         
         if (error.code === 401 || error.message?.includes('invalid_grant')) {
-            emailLog.warning(`OAUTH TOKEN EXPIRED - Attempting to refresh access token`);
+            log.detail(`OAUTH TOKEN EXPIRED - Attempting to refresh access token`);
             try {
                 const refreshed = await oAuth2Client.refreshAccessToken();
-                emailLog.info(`OAUTH REFRESH ATTEMPT`, { 
+                log.detail(`OAUTH REFRESH ATTEMPT`, { 
                     hasNewToken: !!refreshed.credentials.access_token,
                     tokenType: refreshed.credentials.token_type
                 });
@@ -132,27 +107,62 @@ export const sendMailApi = async (options: any): Promise<any> => {
                 const newTokens = refreshed.credentials;
                 oAuth2Client.setCredentials(redactToken(newTokens));
                 
-                emailLog.info(`OAUTH REFRESH SUCCESS - Retrying email send`);
+                log.detail(`OAUTH REFRESH SUCCESS - Retrying email send`);
                 // Try sending the email again with refreshed token
                 return await sendMailApi(options);
             } catch (refreshError: any) {
-                emailLog.error(`OAUTH REFRESH FAILED - Cannot refresh access token`, refreshError);
+                log.error(`OAUTH REFRESH FAILED - Cannot refresh access token`, refreshError);
                 throw new Error(`Email failed: OAuth token refresh failed - ${refreshError.message}`);
             }
         } else {
-            emailLog.error(`GMAIL API FATAL ERROR - Non-recoverable error`, error);
+            log.error(`GMAIL API FATAL ERROR - Non-recoverable error`, error);
             throw new Error(`Email failed: ${error.message || 'Unknown Gmail API error'}`);
         }
     }
 };
 
-export async function sendMail(email: string, keys: {
+type MailKeyDescriptor = {
     key: string,
     name: string,
     parentDeviceName?: string,
-    parentDeviceKey?: string
-}[]): Promise<any> {
-    emailLog.info(`EMAIL COMPOSITION START - Preparing email for ${redactEmail(email)}`, { 
+    parentDeviceKey?: string,
+    sourceOrderNumber?: string,
+    sourceOrderDate?: string
+};
+
+export type MailCustomizationOptions = {
+    subject?: string;
+    heading?: string;
+    introHtml?: string;
+    introText?: string;
+};
+
+function buildOrderMeta(key: MailKeyDescriptor): string {
+    const parts: string[] = [];
+    if (key.sourceOrderNumber) {
+        parts.push(`Order #: ${key.sourceOrderNumber}`);
+    }
+    if (key.sourceOrderDate) {
+        const date = new Date(key.sourceOrderDate);
+        if (!isNaN(date.getTime())) {
+            parts.push(
+                `Placed: ${date.toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                })}`
+            );
+        }
+    }
+    return parts.join("\n");
+}
+
+export async function sendMail(
+    email: string,
+    keys: MailKeyDescriptor[],
+    customization?: MailCustomizationOptions
+): Promise<any> {
+    log.detail(`EMAIL COMPOSITION START - Preparing email for ${redactEmail(email)}`, { 
         keyCount: keys.length,
         keyTypes: keys.map(k => k.name),
         hasParentInfo: keys.some(k => k.parentDeviceName)
@@ -160,14 +170,20 @@ export async function sendMail(email: string, keys: {
 
     try {
         // Read and prepare HTML template
-        emailLog.info(`TEMPLATE LOADING - Reading HTML template`);
+        log.detail(`TEMPLATE LOADING - Reading HTML template`);
         const htmlFile = fs.readFileSync(path.resolve(__dirname, './config/HTMLtemplate.html'), 'utf8');
         
         const rawKeys = keys.map(key => {
+            const sections: string[] = [];
             if (key.parentDeviceName && key.parentDeviceKey) {
-                return `Generated from: ${key.parentDeviceName} (${key.parentDeviceKey})\n${key.name}: ${key.key}`;
+                sections.push(`Generated from: ${key.parentDeviceName} (${key.parentDeviceKey})`);
             }
-            return `${key.name}: ${key.key}`;
+            sections.push(`${key.name}: ${key.key}`);
+            const meta = buildOrderMeta(key);
+            if (meta) {
+                sections.push(meta);
+            }
+            return sections.join('\n');
         }).join('\n\n');
         
         // Generate HTML content using the enhanced template structure
@@ -177,7 +193,6 @@ export async function sendMail(email: string, keys: {
             const keyData = keys[0];
             let htmlContent = '';
             
-            // Add parent device information if available
             if (keyData.parentDeviceName && keyData.parentDeviceKey) {
                 htmlContent += `<div class="parent-device-info">
                                   <p class="parent-device-label">Generated from:</p>
@@ -193,6 +208,13 @@ export async function sendMail(email: string, keys: {
                               <p class="ai-miner-key">${keyData.key}</p>
                               <p class="key-copy-note">⚠️ Copy the entire key including the prefix</p>
                             </div>`;
+            const orderMeta = buildOrderMeta(keyData).replace(/\n/g, '<br/>');
+            if (orderMeta) {
+                htmlContent += `<div class="parent-device-info">
+                                  <p class="parent-device-label">Order Details:</p>
+                                  <p>${orderMeta}</p>
+                                </div>`;
+            }
             
             htmlKeys = htmlContent;
         } else {
@@ -200,7 +222,6 @@ export async function sendMail(email: string, keys: {
             htmlKeys = keys.map((keyData, index) => {
                 let containerContent = '';
                 
-                // Add parent device information if available
                 if (keyData.parentDeviceName && keyData.parentDeviceKey) {
                     containerContent += `<div class="parent-device-info">
                                           <p class="parent-device-label">Generated from:</p>
@@ -216,6 +237,10 @@ export async function sendMail(email: string, keys: {
                                       <p class="ai-miner-key">${keyData.key}</p>
                                       <p class="key-copy-note">⚠️ Copy the entire key including the prefix</p>
                                     </div>`;
+                const orderMeta = buildOrderMeta(keyData).replace(/\n/g, '<br/>');
+                if (orderMeta) {
+                    containerContent += `<p style="margin-top:8px;font-size:14px;color:#555;">${orderMeta}</p>`;
+                }
                 
                 return `<div style="margin: 25px 0; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; background-color: #fafbfc;">
                            ${containerContent}
@@ -223,20 +248,31 @@ export async function sendMail(email: string, keys: {
             }).join('');
         }
         
-        const edited = htmlFile.replace('KEY_REPLACE_TEXT', htmlKeys);
+        const headingText = customization?.heading || 'Your FRY Networks Miner Keys';
+        const introHtml = customization?.introHtml
+            ? `${customization.introHtml}\n`
+            : '';
+        const edited = htmlFile
+            .replace('Your FRY Networks Miner Keys', headingText)
+            .replace('KEY_REPLACE_TEXT', `${introHtml}${htmlKeys}`);
 
-        emailLog.success(`TEMPLATE PREPARED - Email content ready`, { 
+        log.detail(`TEMPLATE PREPARED - Email content ready`, { 
             rawKeysLength: rawKeys.length,
             htmlKeysLength: htmlKeys.length,
             templateProcessed: true,
             hasParentInfo: keys.some(k => k.parentDeviceName)
         });
 
+        const introText = customization?.introText
+            ? `${customization.introText}\n\n`
+            : '';
+        const textBody = `${introText}Your Miner key(s):\n\n${rawKeys}\n\nPlease save this email for future reference.\n\nBest regards,\nFRY Networks Team`;
+
         const options = {
             from: 'no-reply@frynetworks.com',
             to: email,
-            subject: 'Your Miner Key(s) - FRY Networks',
-            text: `Your Miner key(s):\n\n${rawKeys}\n\nPlease save this email for future reference.\n\nBest regards,\nFRY Networks Team`,
+            subject: customization?.subject || 'Your Miner Key(s) - FRY Networks',
+            text: textBody,
             html: edited,
             headers: {
                 'List-Unsubscribe': `<${buildUnsubscribeUrl(email)}>, <mailto:no-reply@frynetworks.com>`,
@@ -244,10 +280,10 @@ export async function sendMail(email: string, keys: {
             }
         };
         
-        emailLog.info(`EMAIL SENDING START - Calling Gmail API`);
+        log.detail(`EMAIL SENDING START - Calling Gmail API`);
         const result = await sendMailApi(options);
         
-        emailLog.success(`EMAIL SENT SUCCESSFULLY - Miner keys delivered to ${redactEmail(email)}`, { 
+        log.detail(`EMAIL SENT SUCCESSFULLY - Miner keys delivered to ${redactEmail(email)}`, { 
             keyCount: keys.length,
             messageId: result?.data?.id,
             recipient: redactEmail(email)
@@ -256,7 +292,7 @@ export async function sendMail(email: string, keys: {
         return result;
         
     } catch (error: any) {
-        emailLog.error(`EMAIL SENDING FAILED - Could not send miner keys to ${redactEmail(email)}`, error);
+        log.error(`EMAIL SENDING FAILED - Could not send miner keys to ${redactEmail(email)}`, error);
         throw error; // Re-throw so calling code can handle it
     }
 }

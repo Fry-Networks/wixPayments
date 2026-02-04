@@ -5,12 +5,14 @@ import { connect } from "./db/connect.js";
 import { secrets } from "./config/secrets.js";
 import { Order } from "otherTypes.js";
 import { OrderWithFulfillments } from "fulfillTypes.js";
+import { log } from "./logger.js";
 const app = express();
 app.use(express.json());
 
 const baseUrl = `https://www.wixapis.com/stores/v1/products/query`;
 
 let products: Product[] = [];
+let hasLoggedProductSummary = false;
 
 // Map new Wix product names to internal legacy names (maintains backward compatibility)
 function mapWixNameToInternalName(wixName: string): string {
@@ -70,15 +72,19 @@ async function fetchAllProducts() {
         "wix-site-id": secrets.siteId,
       },
     });
+    let mappedCount = 0;
+    const totalCount = response.data.products.length;
     const names = response.data.products.map((product: any) => product.name);
-    console.log("Wix product names:", names);
-
+    log.detail("Wix product names", names);
     products = response.data.products
       .filter((product: any) => product.name.includes("Fry"))
       .map((product: any) => {
         // Map new Wix name to internal legacy name
         const internalName = mapWixNameToInternalName(product.name);
-        console.log(`Mapped: "${product.name}" -> "${internalName}"`);
+        if (internalName !== product.name) mappedCount += 1;
+        if (internalName !== product.name) {
+          log.detail("Product mapped", { from: product.name, to: internalName });
+        }
 
         const key = internalName
           .replace("$FRY ", "")
@@ -136,10 +142,15 @@ async function fetchAllProducts() {
         };
       });
 
-    console.log("Product print!!!!");
-    console.log(products);
+    log.detail("Product list", products);
+    if (!hasLoggedProductSummary) {
+      log.info(
+        `Wix products fetched (startup): total=${totalCount}, fry=${products.length}, mapped=${mappedCount}`
+      );
+      hasLoggedProductSummary = true;
+    }
   } catch (error: any) {
-    console.error("Error fetching products:", error.response.data);
+    log.error("Error fetching products", error);
   }
   //check for unicity of keys
   let keys: string[] = [];

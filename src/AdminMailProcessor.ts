@@ -1,6 +1,7 @@
 'use server';
 import { sendMailApi } from './MailProcessor.js';
 import { redactEmail } from './redact-utils.js';
+import { log } from './logger.js';
 
 /**
  * Dedicated Admin Email Processor
@@ -8,31 +9,6 @@ import { redactEmail } from './redact-utils.js';
  * Handles admin notifications with professional formatting,
  * separate from customer miner key emails.
  */
-
-// Enhanced admin email logging utility
-const adminEmailLog = {
-    info: (message: string, data?: any) => {
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] 📧🔧 ADMIN EMAIL: ${message}`, data ? JSON.stringify(data, null, 2) : '');
-    },
-    success: (message: string, data?: any) => {
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] ✅📧🔧 ADMIN EMAIL: ${message}`, data ? JSON.stringify(data, null, 2) : '');
-    },
-    warning: (message: string, data?: any) => {
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] ⚠️📧🔧 ADMIN EMAIL: ${message}`, data ? JSON.stringify(data, null, 2) : '');
-    },
-    error: (message: string, error?: any) => {
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] ❌📧🔧 ADMIN EMAIL: ${message}`);
-        if (error) {
-            if (error.message) console.log(`   📧🔧 Error: ${error.message}`);
-            if (error.code) console.log(`   📧🔧 Code: ${error.code}`);
-            if (error.response?.data) console.log(`   📧🔧 Response: ${JSON.stringify(error.response.data)}`);
-        }
-    }
-};
 
 export interface AdminEmailData {
     subject: string;
@@ -52,7 +28,7 @@ export async function sendAdminNotification(
     adminEmail: string, 
     emailData: AdminEmailData
 ): Promise<any> {
-    adminEmailLog.info(`ADMIN NOTIFICATION START - Preparing notification for ${redactEmail(adminEmail)}`, {
+    log.detail(`ADMIN NOTIFICATION START - Preparing notification for ${redactEmail(adminEmail)}`, {
         subject: emailData.subject,
         category: emailData.category,
         priority: emailData.priority,
@@ -70,10 +46,10 @@ export async function sendAdminNotification(
             html: htmlContent,
         };
         
-        adminEmailLog.info(`ADMIN EMAIL SENDING START - Calling Gmail API for admin notification`);
+        log.detail(`ADMIN EMAIL SENDING START - Calling Gmail API for admin notification`);
         const result = await sendMailApi(options);
         
-        adminEmailLog.success(`ADMIN EMAIL SENT SUCCESSFULLY - Notification delivered to ${redactEmail(adminEmail)}`, {
+        log.detail(`ADMIN EMAIL SENT SUCCESSFULLY - Notification delivered to ${redactEmail(adminEmail)}`, {
             subject: emailData.subject,
             messageId: result?.data?.id,
             category: emailData.category,
@@ -83,7 +59,7 @@ export async function sendAdminNotification(
         return result;
         
     } catch (error: any) {
-        adminEmailLog.error(`ADMIN EMAIL SENDING FAILED - Could not send notification to ${redactEmail(adminEmail)}`, error);
+        log.error(`ADMIN EMAIL SENDING FAILED - Could not send notification to ${redactEmail(adminEmail)}`, error);
         throw error;
     }
 }
