@@ -31,7 +31,10 @@ export const devicesSchema = new mongoose.Schema({
     parent_device_miner_key: String,
     // Email tracking fields (only for AI miner documents with name "$FRY AI Edge Miner")
     email_sent: { type: Boolean, default: false },
-    email_sent_at: Date
+    email_sent_at: Date,
+    // Airdrop metadata for manually issued devices
+    airdrop_source_order: String,
+    airdrop_source_order_date: Date
 });
 export interface Device extends mongoose.Document {
 	user_id: mongoose.Schema.Types.ObjectId | string,
@@ -65,7 +68,10 @@ export interface Device extends mongoose.Document {
     parent_device_miner_key?: string,
     // Email tracking fields (only for AI miner documents with name "$FRY AI Edge Miner")
     email_sent?: boolean,
-    email_sent_at?: Date
+    email_sent_at?: Date,
+    // Airdrop metadata
+    airdrop_source_order?: string,
+    airdrop_source_order_date?: Date
 }
 
 export const DeviceModel = mongoose.model<Device>('devices', devicesSchema);
