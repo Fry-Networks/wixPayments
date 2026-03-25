@@ -6,6 +6,9 @@ services:
     image: wix_payments:prod
     container_name: wix_payments
     init: true
+    dns:
+      - "100.100.100.100"  # Tailscale MagicDNS
+      - "8.8.8.8"          # Google DNS fallback
     restart: unless-stopped
     ports:
       - "127.0.0.1:3011:3011"
