@@ -20,7 +20,7 @@ services:
       MONGO_CA_CERT_PATH: /etc/ssl/mongo/mongo-ca.crt
       BASE_API_KEY: "op://wixPayments/wix-payments-api-key/password"
       MONGO_URI: "op://wixPayments/wix-payments-mongodb/database"
-      AUTH_TOKEN: "op://wixPayments/wix-auth-token/password"
+      AUTH_TOKEN: "op://wixPayments/wix-payments-api-key/password"
       SITE_ID: "op://wixPayments/wix-site-id/password"
       EMAIL_ADDRESS: "op://wixPayments/admin-email/password"
       UNSUBSCRIBE_SECRET: "op://wixPayments/UNSUBSCRIBE_SECRET/password"

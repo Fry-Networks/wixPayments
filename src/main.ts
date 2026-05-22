@@ -847,8 +847,8 @@ app.post("/wix_fulfill", async function (req, res) {
 
       fulfillments.map((fulfillment) => {
         fulfillment.lineItems.map((item) => {
-          const index = parseInt(item.id.replaceAll("-", "")) - 1;
-          const found = order_data.lineItems[index];
+          // Fixed: use ID-based lookup instead of fragile parseInt index
+          const found = order_data.lineItems.find(li => li.id === item.id);
           if (found)
             products_ids.push({
               productId: found.catalogReference.catalogItemId,
