@@ -59,4 +59,4 @@
 - $FRY AI Indoor Sky Camera Miner
 - $FRY Outdoor Decibel Miner
 - $FRY Contributor Node
-- $FRY AI Edge Miner
+- $FRY Fry Edge Miner

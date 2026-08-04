@@ -6,9 +6,6 @@ services:
     image: wix_payments:prod
     container_name: wix_payments
     init: true
-    dns:
-      - "100.100.100.100"  # Tailscale MagicDNS
-      - "8.8.8.8"          # Google DNS fallback
     restart: unless-stopped
     ports:
       - "127.0.0.1:3011:3011"
@@ -59,7 +56,13 @@ services:
     cap_add:
       - SETUID
       - SETGID
+    networks:
+      - frynet
 
 secrets:
   op_service_account_token:
     file: /etc/opt/wix/op_service_account_token
+
+networks:
+  frynet:
+    external: true

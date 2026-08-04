@@ -1,7 +1,7 @@
 
 import mongoose, { mongo } from 'mongoose';
 export const productsSchema = new mongoose.Schema({
-    wix_id: String,
+    wix_id: { type: String, unique: true },
     name: String,
     key: String,
     type: String,

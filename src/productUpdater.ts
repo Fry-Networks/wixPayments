@@ -14,49 +14,9 @@ const baseUrl = `https://www.wixapis.com/stores/v1/products/query`;
 let products: Product[] = [];
 let hasLoggedProductSummary = false;
 
-// Map new Wix product names to internal legacy names (maintains backward compatibility)
+// Post-FEM migration: all Wix products map to single internal name
 function mapWixNameToInternalName(wixName: string): string {
-  const wixToInternalMapping: { [key: string]: string } = {
-    "Fry AI Edge Agent": "$FRY AI Edge Miner",
-    "Fry Storage Validator Node": "$FRY Storage Validator Node",
-    "Fry Storage Node": "$FRY Storage Decentralization Node",
-    "Fry Compute Node": "$FRY Reward Decentralization Node",
-    "Fry Outdoor Low-End Water Quality Sensor":
-      "$FRY Outdoor Low-End Water Quality Miner",
-    "Fry Outdoor High-End Water Quality Sensor":
-      "$FRY Outdoor High-End Water Quality Miner",
-    "Fry Indoor High-End Air Quality Sensor":
-      "$FRY Indoor High-End Air Quality Miner",
-    "Fry Outdoor High-End Air Quality Sensor":
-      "$FRY Outdoor High-End Air Quality Miner",
-    "Fry Indoor Low-End Air Quality Sensor":
-      "$FRY Indoor Low-End Air Quality Miner",
-    "Fry Outdoor Mid-End Air Quality Sensor":
-      "$FRY Outdoor Mid-End Air Quality Miner",
-    "Fry Indoor Mid-End Air Quality Sensor":
-      "$FRY Indoor Mid-End Air Quality Miner",
-    "Fry Energy Gateway": "$FRY Energy Miner",
-    "Fry Indoor Radiation Sensor": "$FRY Indoor Radiation Miner",
-    "Fry AI Outdoor Weather Station Camera":
-      "$FRY AI Outdoor Weather Station Camera Miner",
-    "Fry AI Indoor Weather Station Camera":
-      "$FRY AI Indoor Weather Station Camera Miner",
-    "Fry AI Outdoor Wildlife Camera": "$FRY AI Outdoor Wildlife Camera Miner",
-    "Fry AI Indoor Wildlife Camera": "$FRY AI Indoor Wildlife Camera Miner",
-    "Fry AI Outdoor Sky Camera": "$FRY AI Outdoor Sky Camera Miner",
-    "Fry AI Indoor Sky Camera": "$FRY AI Indoor Sky Camera Miner",
-    "Fry AI Outdoor Traffic Camera": "$FRY AI Outdoor Traffic Camera Miner",
-    "Fry AI Indoor Traffic Camera": "$FRY AI Indoor Traffic Camera Miner",
-    "Fry High-End Weather Station": "$FRY High-End Weather Miner",
-    "Fry Low-End Weather Station": "$FRY Low-End Weather Miner",
-    "Fry Outdoor Noise Sensor": "$FRY Outdoor Decibel Miner",
-    "Fry Indoor Noise Sensor": "$FRY Indoor Decibel Miner",
-    "Fry Outdoor Satellite Sensor": "$FRY Outdoor Satellite Miner",
-    "Fry Indoor Satellite Sensor": "$FRY Indoor Satellite Miner",
-    "Fry Bandwidth Gateway": "$FRY Bandwidth Miner",
-  };
-
-  return wixToInternalMapping[wixName] || wixName;
+  return "Fry Edge Miner";
 }
 
 // Function to fetch all products
@@ -152,21 +112,13 @@ async function fetchAllProducts() {
   } catch (error: any) {
     log.error("Error fetching products", error);
   }
-  //check for unicity of keys
-  let keys: string[] = [];
-  products.forEach((product: any) => {
-    if (keys.includes(product.key)) {
-      throw new Error("Duplicate key: " + product.key);
-    } else {
-      keys.push(product.key);
-    }
-  });
+  // Post-FEM migration: all products share key=FEM; unicity enforced by wix_id unique index
   await connect();
   const promises = products.map(async (product: any) => {
     return new Promise(async (resolve, reject) => {
-      if (await ProductModel.exists({ name: product.name })) {
+      if (await ProductModel.exists({ wix_id: product.wix_id })) {
         const old: Product | null = await ProductModel.findOne({
-          name: product.name,
+          wix_id: product.wix_id,
         });
         if (old) {
           let isTheSame = true;
@@ -176,7 +128,7 @@ async function fetchAllProducts() {
             }
           }
           if (!isTheSame) {
-            await ProductModel.updateOne({ name: product.name }, product);
+            await ProductModel.updateOne({ wix_id: product.wix_id }, product);
           }
         }
       } else {
